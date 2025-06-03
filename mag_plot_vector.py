@@ -11,9 +11,9 @@ def ref_solution(x, y):
 
 if __name__ == "__main__":
     #data = np.loadtxt("runs/06.02-14.37.44-adam+epochs/0-0/model_output.txt", comments="#", delimiter=" ")
-    data = np.loadtxt("runs/06.02-15.00.50-adam/0-0/model_output.txt", comments="#", delimiter=" ")
-    data = np.loadtxt("runs/06.02-15.16.29-adam_sigma01/0-0/model_output.txt", comments="#", delimiter=" ")
-    
+    #data = np.loadtxt("runs/06.02-15.00.50-adam/0-0/model_output.txt", comments="#", delimiter=" ")
+    #data = np.loadtxt("runs/06.02-15.16.29-adam_sigma01/0-0/model_output.txt", comments="#", delimiter=" ")
+    data = np.loadtxt("runs/06.03-12.33.27-ellipse_test/0-0/model_output.txt", comments="#", delimiter=" ")
 
     x, y, u, v = data[:, 0], data[:, 1], data[:, 2], data[:, 3]
     u_ref, v_ref = ref_solution(x, y)

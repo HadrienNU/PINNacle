@@ -67,6 +67,115 @@ class Disk(Geometry):
         h = dx / n
         pts = x - np.arange(-shift, n - shift + 1, dtype=config.real(np))[:, None] * h * dirn
         return pts
+    
+
+class Ellipse(Geometry):
+    def __init__(self, center, width, height):
+        self.center = np.array(center, dtype=config.real(np))
+        self.width = width
+        self.height = height
+        super().__init__(2, (self.center - np.array([width, height]), self.center + np.array([width, height])), 2 * max(width, height))
+
+        self._w2 = width**2
+        self._h2 = height**2
+    
+    def inside(self, x):
+        xc = x[..., 0] - self.center[0]
+        yc = x[..., 1] - self.center[1]
+        val = (xc ** 2) / self._w2 + (yc ** 2) / self._h2
+        return val <= 1
+    
+    '''def inside(self, x):
+        x = np.asarray(x)
+        if x.ndim == 3:
+            # Grid input, shape (N, N, 2)
+            xc = x[..., 0] - self.center[0]
+            yc = x[..., 1] - self.center[1]
+            val = (xc ** 2) / self._w2 + (yc ** 2) / self._h2
+            return val <= 1
+        else:
+            # Point list input, shape (N, 2)
+            xc = x[:, 0] - self.center[0]
+            yc = x[:, 1] - self.center[1]
+            val = (xc ** 2) / self._w2 + (yc ** 2) / self._h2
+            return val <= 1'''
+    
+    def on_boundary(self, x):
+        xc = x[..., 0] - self.center[0]
+        yc = x[..., 1] - self.center[1]
+        val = (xc ** 2) / self._w2 + (yc ** 2) / self._h2
+        return np.isclose(val, 1.0)
+    
+    '''def on_boundary(self, x):
+        x = np.asarray(x)
+        if x.ndim == 3:
+            xc = x[..., 0] - self.center[0]
+            yc = x[..., 1] - self.center[1]
+            val = (xc ** 2) / self._w2 + (yc ** 2) / self._h2
+            return np.isclose(val, 1.0)
+        else:
+            xc = x[:, 0] - self.center[0]
+            yc = x[:, 1] - self.center[1]
+            val = (xc ** 2) / self._w2 + (yc ** 2) / self._h2
+            return np.isclose(val, 1.0)'''
+    
+    def distance2boundary_unitdirn(self, x, dirn):
+        xc = x - self.center
+        dx, dy = dirn
+
+        A = (dx / self.width) ** 2 + (dy / self.height) ** 2
+        B = 2 * (xc[:, 0] * dx / (self.width ** 2) + xc[:, 1] * dy / (self.height ** 2))
+        C = (xc[:, 0] / self.width) ** 2 + (xc[:, 1] / self.height) ** 2 - 1
+
+        disc = B ** 2 - 4 * A * C
+        disc = np.clip(disc, a_min=0.0, a_max=None)
+        t = (-B + np.sqrt(disc)) / (2 * A)
+        return t.astype(config.real(np))
+    
+    def distance2boundary(self, x, dirn):
+        return self.distance2boundary_unitdirn(x, dirn / np.linalg.norm(dirn))
+    
+    def mindist2boundary(self, x):
+        xc = x - self.center
+        rx = np.abs(xc[:, 0]) / self.width
+        ry = np.abs(xc[:, 1]) / self.height
+        rho = np.sqrt(rx**2 + ry**2)
+        return 1 - rho
+    
+    def boundary_normal(self, x):
+        xc = x - self.center
+        nx = 2 * xc[:, 0:1] / self._w2
+        ny = 2 * xc[:, 1:2] / self._h2
+        n = np.hstack((nx, ny))
+        l = np.linalg.norm(n, axis=-1, keepdims=True)
+        return n / l
+    
+    def random_points(self, n, random="pseudo"):
+        rng = sample(n, 2, random)
+        r, theta = np.sqrt(rng[:, 0]), 2 * np.pi * rng[:, 1]
+        x = self.width * r * np.cos(theta)
+        y = self.height * r * np.sin(theta)
+        return np.vstack((x, y)).T + self.center
+    
+    def uniform_boundary_points(self, n):
+        theta = np.linspace(0, 2 * np.pi, num=n, endpoint=False)
+        x = self.width * np.cos(theta)
+        y = self.height * np.sin(theta)
+        return np.vstack((x, y)).T + self.center
+    
+    def random_boundary_points(self, n, random="pseudo"):
+        theta = 2 * np.pi * sample(n, 1, random)
+        x = self.width * np.cos(theta[:, 0])
+        y = self.height * np.sin(theta[:, 0])
+        return np.vstack((x, y)).T + self.center
+    
+    def background_points(self, x, dirn, dist2npt, shift):
+        dirn = dirn / np.linalg.norm(dirn)
+        dx = self.distance2boundary_unitdirn(x, -dirn)
+        n = max(dist2npt(dx), 1)
+        h = dx / n
+        pts = x - np.arange(-shift, n - shift + 1, dtype=config.real(np))[:, None] * h * dirn
+        return pts
 
 
 class Rectangle(Hypercube):
