@@ -6,7 +6,7 @@ from deepxde import config
 
 class Magnetism_2D(baseclass.BasePDE):
     
-    def __init__(self, bbox=[-1, 1, -1, 1], space=[0, 0, 1], circ=[0, 0, 0.02], mu0=4*np.pi*1e-7, I=100.0, sigma=0.01):
+    def __init__(self, bbox=[-1, 1, -1, 1], space=[0, 0, 1, 0.6], circ=[-0.2, -0.2, 0.02], mu0=4*np.pi*1e-7, I=100.0, sigma=0.02):
         super().__init__()
         # output dim
         self.output_config = [{'name': s} for s in ['Bx', 'By']]
@@ -15,7 +15,11 @@ class Magnetism_2D(baseclass.BasePDE):
         self.bbox = bbox
         self.space = space
         self.circ = circ
-        geom = dde.geometry.Disk(space[0:2], space[2])
+        #geom = dde.geometry.Disk(space[0:2], space[2])
+        geom = dde.geometry.Ellipse(space[0:2], space[2], space[3])
+        #geom = dde.geometry.Rectangle(xmin=[bbox[0], bbox[2]], xmax=[bbox[1], bbox[3]])
+        #ngeom = dde.geometry.Rectangle(xmin=[space[0], space[2]], xmax=[space[1], space[3]])
+        #geom = dde.geometry.csg.CSGDifference(geom, ngeom)
         circ = dde.geometry.Disk(circ[0:2], circ[2])
         self.geom = dde.geometry.csg.CSGDifference(geom, circ)
 
@@ -32,7 +36,8 @@ class Magnetism_2D(baseclass.BasePDE):
 
             def f(xy):
                 x, y = xy[:, 0:1], xy[:, 1:2]
-                return ((self.mu0 * self.I) / (2 * np.pi * self.sigma**2)) * dde.backend.exp(-(x**2 + y**2) / (2 * self.sigma**2))
+                x0, y0 = self.circ[0], self.circ[1]
+                return ((self.mu0 * self.I) / (2 * np.pi * self.sigma**2)) * dde.backend.exp(-((x - x0)**2 + (y - y0)**2) / (2 * self.sigma**2))
             
             gauss = Bx_x + By_y
             amp_max = By_x - Bx_y - f(x)
@@ -47,16 +52,18 @@ class Magnetism_2D(baseclass.BasePDE):
 
         def Bx_ref(xy):
             x, y = xy[:, 0:1], xy[:, 1:2]
-            return -(self.mu0 * self.I * y) / (2 * np.pi * (x**2 + y**2))
+            x0, y0 = self.circ[0], self.circ[1]
+            return -(self.mu0 * self.I * (y - y0)) / (2 * np.pi * ((x - x0)**2 + (y - y0)**2))
 
         def By_ref(xy):
             x, y = xy[:, 0:1], xy[:, 1:2]
-            return (self.mu0 * self.I * x) / (2 * np.pi * (x**2 + y**2))
+            x0, y0 = self.circ[0], self.circ[1]
+            return (self.mu0 * self.I * (x - x0)) / (2 * np.pi * ((x - x0)**2 + (y - y0)**2))
 
         # Boundary Condition
         def boundary_space(x, on_boundary):
-            center = np.array(self.space[0:2], dtype=config.real(np))
-            return on_boundary and np.isclose(np.linalg.norm(x - center, axis=-1), self.space[2])
+            center_circ = np.array(self.circ[0:2], dtype=config.real(np))
+            return on_boundary and not np.isclose(np.linalg.norm(x - center_circ, axis=-1), self.circ[2]) #and not (x[0] > self.space[0] and x[1] > self.space[2])
         
         # Value on Boundary
         def boundary_func(x, component):
@@ -88,7 +95,7 @@ class Magnetism_2D(baseclass.BasePDE):
 
 class ElectroMag_2DTime(baseclass.BasePDE):
     
-    def __init__(self, bbox=[-1, 1, -1, 1, 0, 5], space=[0, 0, 1], circ=[0, 0, 0.02], mu0=4*np.pi*1e-7, I=100.0, sigma=0.01):
+    def __init__(self, bbox=[-1, 1, -1, 1, 0, 5], space=[0, 0, 1, 0.6], circ=[0, 0, 0.02], mu0=4*np.pi*1e-7, I=100.0, sigma=0.01):
         super().__init__()
         # output dim
         self.output_config = [{'name': s} for s in ['Bx', 'By']]
@@ -97,7 +104,7 @@ class ElectroMag_2DTime(baseclass.BasePDE):
         self.bbox = bbox
         self.space = space
         self.circ = circ
-        geom = dde.geometry.Disk(space[0:2], space[2])
+        geom = dde.geometry.Ellipse(space[0:2], space[2], space[3])
         circ = dde.geometry.Disk(circ[0:2], circ[2])
         self.geom = dde.geometry.csg.CSGDifference(geom, circ)
         timedomain = dde.geometry.TimeDomain(self.bbox[4], self.bbox[5])

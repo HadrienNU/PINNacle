@@ -85,39 +85,11 @@ class Ellipse(Geometry):
         val = (xc ** 2) / self._w2 + (yc ** 2) / self._h2
         return val <= 1
     
-    '''def inside(self, x):
-        x = np.asarray(x)
-        if x.ndim == 3:
-            # Grid input, shape (N, N, 2)
-            xc = x[..., 0] - self.center[0]
-            yc = x[..., 1] - self.center[1]
-            val = (xc ** 2) / self._w2 + (yc ** 2) / self._h2
-            return val <= 1
-        else:
-            # Point list input, shape (N, 2)
-            xc = x[:, 0] - self.center[0]
-            yc = x[:, 1] - self.center[1]
-            val = (xc ** 2) / self._w2 + (yc ** 2) / self._h2
-            return val <= 1'''
-    
     def on_boundary(self, x):
         xc = x[..., 0] - self.center[0]
         yc = x[..., 1] - self.center[1]
         val = (xc ** 2) / self._w2 + (yc ** 2) / self._h2
         return np.isclose(val, 1.0)
-    
-    '''def on_boundary(self, x):
-        x = np.asarray(x)
-        if x.ndim == 3:
-            xc = x[..., 0] - self.center[0]
-            yc = x[..., 1] - self.center[1]
-            val = (xc ** 2) / self._w2 + (yc ** 2) / self._h2
-            return np.isclose(val, 1.0)
-        else:
-            xc = x[:, 0] - self.center[0]
-            yc = x[:, 1] - self.center[1]
-            val = (xc ** 2) / self._w2 + (yc ** 2) / self._h2
-            return np.isclose(val, 1.0)'''
     
     def distance2boundary_unitdirn(self, x, dirn):
         xc = x - self.center
@@ -503,7 +475,7 @@ class Polygon(Geometry):
         return wn_PnPoly(x, self.vertices) != 0
 
     def on_boundary(self, x):
-        _on = np.zeros(shape=len(x), dtype=np.int)
+        _on = np.zeros(shape=len(x), dtype=int)
         for i in range(-1, self.nvertices - 1):
             l1 = np.linalg.norm(self.vertices[i] - x, axis=-1)
             l2 = np.linalg.norm(self.vertices[i + 1] - x, axis=-1)
