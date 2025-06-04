@@ -4,7 +4,7 @@ import numpy as np
 def ref_solution(x, y):
         mu0=4*np.pi*1e-7
         I=100.0
-        x0, y0 = -0.2, -0.2
+        x0, y0 = 0, 0
 
         u = -(mu0 * I * (y - y0)) / (2 * np.pi * ((x - x0)**2 + (y - y0)**2))
         v = (mu0 * I * (x - x0)) / (2 * np.pi * ((x - x0)**2 + (y - y0)**2))
@@ -16,9 +16,8 @@ if __name__ == "__main__":
     #data = np.loadtxt("runs/06.02-15.16.29-adam_sigma01/0-0/model_output.txt", comments="#", delimiter=" ")
 
     #data = np.loadtxt("runs/06.03-13.39.19-adam_dislocated/0-0/model_output.txt", comments="#", delimiter=" ")
-    #data = np.loadtxt("runs/06.03-13.52.05-adam_ellipse/0-0/model_output.txt", comments="#", delimiter=" ")
-    data = np.loadtxt("runs/06.03-14.39.17-adam_polygon/0-0/model_output.txt", comments="#", delimiter=" ")
-    
+    data = np.loadtxt("runs/06.03-13.52.05-adam_ellipse/0-0/model_output.txt", comments="#", delimiter=" ")
+    #data = np.loadtxt("runs/06.03-14.39.17-adam_polygon/0-0/model_output.txt", comments="#", delimiter=" ")
 
     x, y, u, v = data[:, 0], data[:, 1], data[:, 2], data[:, 3]
     u_ref, v_ref = ref_solution(x, y)
@@ -38,3 +37,4 @@ if __name__ == "__main__":
 
     plt.show()
     plt.close()
+

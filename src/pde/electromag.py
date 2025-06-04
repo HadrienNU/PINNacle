@@ -6,7 +6,7 @@ from deepxde import config
 
 class Magnetism_2D(baseclass.BasePDE):
     
-    def __init__(self, bbox=[-1, 1, -1, 1], space=[0, 0, 1, 0.6], circ=[-0.2, -0.2, 0.02], mu0=4*np.pi*1e-7, I=100.0, sigma=0.02):
+    def __init__(self, bbox=[-1, 1, -1, 1], space=[0, 1, 0, 1], circ=[-0.3, -0.3, 0.02], mu0=4*np.pi*1e-7, I=100.0, sigma=0.02):
         super().__init__()
         # output dim
         self.output_config = [{'name': s} for s in ['Bx', 'By']]
@@ -16,10 +16,10 @@ class Magnetism_2D(baseclass.BasePDE):
         self.space = space
         self.circ = circ
         #geom = dde.geometry.Disk(space[0:2], space[2])
-        geom = dde.geometry.Ellipse(space[0:2], space[2], space[3])
-        #geom = dde.geometry.Rectangle(xmin=[bbox[0], bbox[2]], xmax=[bbox[1], bbox[3]])
-        #ngeom = dde.geometry.Rectangle(xmin=[space[0], space[2]], xmax=[space[1], space[3]])
-        #geom = dde.geometry.csg.CSGDifference(geom, ngeom)
+        #geom = dde.geometry.Ellipse(space[0:2], space[2], space[3])
+        geom = dde.geometry.Rectangle(xmin=[bbox[0], bbox[2]], xmax=[bbox[1], bbox[3]])
+        ngeom = dde.geometry.Rectangle(xmin=[space[0], space[2]], xmax=[space[1], space[3]])
+        geom = dde.geometry.csg.CSGDifference(geom, ngeom)
         circ = dde.geometry.Disk(circ[0:2], circ[2])
         self.geom = dde.geometry.csg.CSGDifference(geom, circ)
 
@@ -63,7 +63,7 @@ class Magnetism_2D(baseclass.BasePDE):
         # Boundary Condition
         def boundary_space(x, on_boundary):
             center_circ = np.array(self.circ[0:2], dtype=config.real(np))
-            return on_boundary and not np.isclose(np.linalg.norm(x - center_circ, axis=-1), self.circ[2]) #and not (x[0] > self.space[0] and x[1] > self.space[2])
+            return on_boundary and not np.isclose(np.linalg.norm(x - center_circ, axis=-1), self.circ[2]) and not (x[0] > self.space[0] and x[1] > self.space[2])
         
         # Value on Boundary
         def boundary_func(x, component):
