@@ -11,12 +11,12 @@ import torch
 import deepxde as dde
 from src.model.laaf import DNN_GAAF, DNN_LAAF
 from src.optimizer import MultiAdam, LR_Adaptor, LR_Adaptor_NTK, Adam_LBFGS
-from src.pde.electromag import Magnetism_2D
+from src.pde.electromag import Magnetism_2D, Electric_2D
 from src.utils.args import parse_hidden_layers, parse_loss_weight
 from src.utils.callbacks import TesterCallback, PlotCallback, LossCallback
 from src.utils.rar import rar_wrapper
 
-pde_config = Magnetism_2D
+pde_config = Electric_2D
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='PINNBench trainer')
@@ -104,7 +104,7 @@ if __name__ == "__main__":
     trainer.train_all()
     trainer.summary()
 
-    data = np.loadtxt(f"runs/{date_str}-{command_args.name}/0-0/model_output.txt", comments="#", delimiter=" ")
+    '''data = np.loadtxt(f"runs/{date_str}-{command_args.name}/0-0/model_output.txt", comments="#", delimiter=" ")
 
     pde = pde_config()
     new_data = pde.geom.random_points(5000)
@@ -142,4 +142,4 @@ if __name__ == "__main__":
 
     plt.tight_layout()
     plt.savefig(f"runs/{date_str}-{command_args.name}/0-0/vectors", dpi=300)
-    plt.close()
+    plt.close()'''
