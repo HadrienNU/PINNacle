@@ -7,9 +7,11 @@ os.environ["DDEBACKEND"] = "pytorch"
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.tri as tri
 import torch
 import deepxde as dde
 from src.model.laaf import DNN_GAAF, DNN_LAAF
+#from src.model.kan import KAN
 from src.optimizer import MultiAdam, LR_Adaptor, LR_Adaptor_NTK, Adam_LBFGS
 from src.pde.electromag import Magnetism_2D, Electric_2D
 from src.utils.args import parse_hidden_layers, parse_loss_weight
@@ -23,7 +25,7 @@ if __name__ == "__main__":
     parser.add_argument('--name', type=str, default="benchmark")
     parser.add_argument('--device', type=str, default="0")  # set to "cpu" enables cpu training 
     parser.add_argument('--seed', type=int, default=None)
-    parser.add_argument('--hidden-layers', type=str, default="100*5")
+    parser.add_argument('--hidden-layers', type=str, default="100*5")  #10*10
     parser.add_argument('--loss-weight', type=str, default="")
     parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--iter', type=int, default=20000)
@@ -41,10 +43,12 @@ if __name__ == "__main__":
     trainer = Trainer(f"{date_str}-{command_args.name}", command_args.device)
 
     def get_model_dde():
-        if isinstance(pde_config, tuple):
-            pde = pde_config[0](**pde_config[1])
-        else:
-            pde = pde_config()
+        if "disk" in command_args.name:
+            pde = pde_config(form="disk")
+        elif "ellipse" in command_args.name:
+            pde = pde_config(form="ellipse")
+        elif "polygon" in command_args.name:
+            pde = pde_config(form="polygon")
         
         # pde.training_points()
         if command_args.method == "gepinn":
@@ -55,6 +59,8 @@ if __name__ == "__main__":
             net = DNN_LAAF(len(parse_hidden_layers(command_args)) - 1, parse_hidden_layers(command_args)[0], pde.input_dim, pde.output_dim)
         elif command_args.method == "gaaf":
             net = DNN_GAAF(len(parse_hidden_layers(command_args)) - 1, parse_hidden_layers(command_args)[0], pde.input_dim, pde.output_dim)
+        #elif command_args.method == "kan":
+            #net = KAN(build_splines_layers([2, 2, 1], grid_size=5, grid_alpha=1.0, scale_basis=0.25))
         net = net.float()
 
         loss_weights = parse_loss_weight(command_args)
@@ -104,42 +110,106 @@ if __name__ == "__main__":
     trainer.train_all()
     trainer.summary()
 
-    '''data = np.loadtxt(f"runs/{date_str}-{command_args.name}/0-0/model_output.txt", comments="#", delimiter=" ")
+    if pde_config == Magnetism_2D:
+        data = np.loadtxt(f"runs/{date_str}-{command_args.name}/0-0/model_output.txt", comments="#", delimiter=" ")
+        if "disk" in command_args.name:
+            pde = pde_config(form="disk")
+        elif "ellipse" in command_args.name:
+            pde = pde_config(form="ellipse")
+        elif "polygon" in command_args.name:
+            pde = pde_config(form="polygon")
+        new_data = pde.geom.random_points(5000)
 
-    pde = pde_config()
-    new_data = pde.geom.random_points(5000)
+        model = get_model_dde()
+        model.restore(f"runs/{date_str}-{command_args.name}/0-0/{command_args.iter}.pt")
 
-    model = get_model_dde()
-    #model.load_state_dict(torch.load(f"runs/{date_str}-{command_args.name}/0-0/{command_args.iter}.pt", weights_only=True))
-    model.restore(f"runs/{date_str}-{command_args.name}/0-0/{command_args.iter}.pt")
+        x, y, u, v = data[:, 0], data[:, 1], data[:, 2], data[:, 3]
+        xy = data[:, 0:2]
+        ref_uv = pde.ref_sol(xy)
+        u_ref, v_ref = ref_uv[:, 0], ref_uv[:, 1]
+        output = model.predict(new_data)
+        x_new, y_new = new_data[:, 0], new_data[:, 1]
+        u_inference, v_inference = output[:, 0], output[:, 1]
 
-    x, y, u, v = data[:, 0], data[:, 1], data[:, 2], data[:, 3]
-    xy = data[:, 0:2]
-    ref_uv = pde.ref_sol(xy)
-    u_ref, v_ref = ref_uv[:, 0], ref_uv[:, 1]
-    output = model.predict(new_data)
-    x_new, y_new = new_data[:, 0], new_data[:, 1]
-    u_inference, v_inference = output[:, 0], output[:, 1]
+        color = np.sqrt((u)**2 + (v)**2)
+        color_ref = np.sqrt((u_ref)**2 + (v_ref)**2)
+        color_inference = np.sqrt((u_inference)**2 + (v_inference)**2)
 
-    color = np.sqrt((u)**2 + (v)**2)
-    color_ref = np.sqrt((u_ref)**2 + (v_ref)**2)
-    color_inference = np.sqrt((u_inference)**2 + (v_inference)**2)
+        plt.subplot(2, 2, 1)
+        plt.quiver(x, y, u_ref, v_ref, color_ref)
+        plt.gca().set_aspect("equal")
+        plt.title("Reference Solution Vectors")
 
-    plt.subplot(2, 2, 1)
-    plt.quiver(x, y, u_ref, v_ref, color_ref)
-    plt.gca().set_aspect("equal")
-    plt.title("Reference Solution Vectors")
+        plt.subplot(2, 2, 2)
+        plt.quiver(x, y, u, v, color)
+        plt.gca().set_aspect("equal")
+        plt.title("Model Output Vectors")
 
-    plt.subplot(2, 2, 2)
-    plt.quiver(x, y, u, v, color)
-    plt.gca().set_aspect("equal")
-    plt.title("Model Output Vectors")
+        plt.subplot(2, 1, 2)
+        plt.quiver(x_new, y_new, u_inference, v_inference, color_inference)
+        plt.gca().set_aspect("equal")
+        plt.title("Inference Vectors")
 
-    plt.subplot(2, 1, 2)
-    plt.quiver(x_new, y_new, u_inference, v_inference, color_inference)
-    plt.gca().set_aspect("equal")
-    plt.title("Inference Vectors")
+        plt.tight_layout()
+        plt.savefig(f"runs/{date_str}-{command_args.name}/0-0/vectors", dpi=300)
+        plt.close()
+    
+    elif pde_config == Electric_2D:
+        data = np.loadtxt(f"runs/{date_str}-{command_args.name}/0-0/model_output.txt", comments="#", delimiter=" ")
+        if "disk" in command_args.name:
+            pde = pde_config(form="disk")
+        elif "ellipse" in command_args.name:
+            pde = pde_config(form="ellipse")
+        elif "polygon" in command_args.name:
+            pde = pde_config(form="polygon")
+        new_data = pde.geom.random_points(5000)
 
-    plt.tight_layout()
-    plt.savefig(f"runs/{date_str}-{command_args.name}/0-0/vectors", dpi=300)
-    plt.close()'''
+        model = get_model_dde()
+        model.restore(f"runs/{date_str}-{command_args.name}/0-0/{command_args.iter}.pt")
+
+        x, y, o = data[:, 0], data[:, 1], data[:, 2]
+        xy = data[:, 0:2]
+        o_ref = pde.ref_sol(xy)
+        o_inference = model.predict(new_data)
+        x_new, y_new = new_data[:, 0], new_data[:, 1]
+
+        triangulation = tri.Triangulation(x, y)
+        triangulation_new = tri.Triangulation(x_new, y_new)
+
+        triangles = triangulation.triangles
+        centroids = np.mean(xy[triangles], axis=1)
+        triangle_mask = ~pde.geom.inside(centroids)
+        triangulation.set_mask(triangle_mask)
+
+        triangles_new = triangulation_new.triangles
+        centroids_new = np.mean(new_data[triangles_new], axis=1)
+        triangle_mask_new = ~pde.geom.inside(centroids_new)
+        triangulation_new.set_mask(triangle_mask_new)
+
+        plt.subplot(2, 2, 1)
+        plt.tripcolor(triangulation, o_ref.ravel(), shading='gouraud', cmap='viridis')
+        plt.colorbar(label='Charge')
+        plt.xlabel("x")
+        plt.ylabel("y")
+        plt.axis("equal")
+        plt.title("Reference Solution Heatmap")
+
+        plt.subplot(2, 2, 2)
+        plt.tripcolor(triangulation, o.ravel(), shading='gouraud', cmap='viridis')
+        plt.colorbar(label='Charge')
+        plt.xlabel("x")
+        plt.ylabel("y")
+        plt.axis("equal")
+        plt.title("Model Output Heatmap")
+
+        plt.subplot(2, 1, 2)
+        plt.tripcolor(triangulation_new, o_inference.ravel(), shading='gouraud', cmap='viridis')
+        plt.colorbar(label='Charge')
+        plt.xlabel("x")
+        plt.ylabel("y")
+        plt.axis("equal")
+        plt.title("Inference Heatmap")
+
+        plt.tight_layout()
+        plt.savefig(f"runs/{date_str}-{command_args.name}/0-0/heatmaps", dpi=300)
+        plt.close()

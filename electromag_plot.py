@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
+import matplotlib.tri as tri
 import numpy as np
-from scipy.interpolate import griddata
+from src.pde.electromag import Magnetism_2D, Electric_2D
 
 from scipy.special import kv
 from scipy.signal import fftconvolve
@@ -21,7 +22,7 @@ def electric_ref_solution(xy):
     Q=1e-9
     sigma_x=0.3
     sigma_y=0.3
-    beam = [0, 0]
+    beam = [-0.2, -0.2]
     gamma=100.0
     c = 3e8
     beta = np.sqrt(1 - 1 / gamma**2)
@@ -78,23 +79,28 @@ if __name__ == "__main__":
     plt.show()
     plt.close()'''
 
-    data = np.loadtxt("runs/06.05-15.12.49-electric-adam-disk/0-0/model_output.txt", comments="#", delimiter=" ")
+    #data = np.loadtxt("runs/06.05-15.12.49-electric-adam-disk/0-0/model_output.txt", comments="#", delimiter=" ")
     #data = np.loadtxt("runs/06.05-15.30.50-electric-adam-ellipse/0-0/model_output.txt", comments="#", delimiter=" ")
-    #data = np.loadtxt("runs/06.05-15.52.43-electric-adam-polygon/0-0/model_output.txt", comments="#", delimiter=" ")
+    data = np.loadtxt("runs/06.05-15.52.43-electric-adam-polygon/0-0/model_output.txt", comments="#", delimiter=" ")
 
     x, y, o = data[:, 0], data[:, 1], data[:, 2]
     xy = data[:, 0:2]
     o_ref = electric_ref_solution(xy)
 
-    xx = np.linspace(np.min(x), np.max(x), 100)
+    pde = Electric_2D()
+    mask = pde.geom.inside(np.stack(x, y), axis=-1)
+    triangulation = tri.Triangulation(x, y, mask)
+
+    '''xx = np.linspace(np.min(x), np.max(x), 100)
     yy = np.linspace(np.min(y), np.max(y), 100)
     X, Y = np.meshgrid(xx, yy)
 
     Z = griddata((x, y), o, (X, Y), method='cubic')
-    Z_ref = griddata((x, y), o_ref, (X, Y), method='cubic')
+    Z_ref = griddata((x, y), o_ref, (X, Y), method='cubic')'''
 
     plt.subplot(1, 2, 1)
-    plt.pcolormesh(X, Y, Z_ref, shading='auto', cmap='viridis')
+    #plt.pcolormesh(X, Y, Z_ref, shading='auto', cmap='viridis')
+    plt.tripcolor(triangulation, o_ref, shading='gouraud', cmap='viridis')
     plt.colorbar(label='Charge')
     plt.xlabel("x")
     plt.ylabel("y")
@@ -102,7 +108,8 @@ if __name__ == "__main__":
     plt.title("Reference Solution Heatmap")
 
     plt.subplot(1, 2, 2)
-    plt.pcolormesh(X, Y, Z, shading='auto', cmap='viridis')
+    #plt.pcolormesh(X, Y, Z, shading='auto', cmap='viridis')
+    plt.tripcolor(triangulation, o, shading='gouraud', cmap='viridis')
     plt.colorbar(label='Charge')
     plt.xlabel("x")
     plt.ylabel("y")
