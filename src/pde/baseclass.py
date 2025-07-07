@@ -179,7 +179,7 @@ class BasePDE():
                 config.append({"name": self.loss_config[i]['name'] + f"_grad{j}", "type": "gepinn"})
         self.loss_config = self.loss_config[:self.num_pde] + config + self.loss_config[self.num_pde:]
 
-    def create_model(self, net):
+    def create_model(self, net, architecture="mlp"):
         self.check()
         self.net = net
         self.data = dde.data.PDE(
@@ -190,7 +190,7 @@ class BasePDE():
             num_boundary=self.num_boundary_points,
             num_test=self.num_test_points,
         )
-        self.model = dde.Model(self.data, net)
+        self.model = dde.Model(self.data, net, architecture)
         self.model.pde = self
         return self.model
 
@@ -225,7 +225,7 @@ class BaseTimePDE(BasePDE):
         self.num_initial_points = initial * mul
         self.num_test_points = test * mul
 
-    def create_model(self, net):
+    def create_model(self, net, architecture="mlp"):
         self.check()
         self.net = net
         self.data = dde.data.TimePDE(
@@ -237,6 +237,6 @@ class BaseTimePDE(BasePDE):
             num_initial=self.num_initial_points,
             num_test=self.num_test_points
         )
-        self.model = dde.Model(self.data, net)
+        self.model = dde.Model(self.data, net, architecture)
         self.model.pde = self
         return self.model

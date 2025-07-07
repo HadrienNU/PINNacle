@@ -16,6 +16,7 @@ from . import utils
 from .backend import backend_name, tf, torch, jax, paddle
 from .callbacks import CallbackList
 from .utils import list_to_str
+from .utils.graph_viz import register_hooks
 
 
 class Model:
@@ -26,9 +27,10 @@ class Model:
         net: ``deepxde.nn.NN`` instance.
     """
 
-    def __init__(self, data, net):
+    def __init__(self, data, net, architecture="mlp"):
         self.data = data
         self.net = net
+        self.architecture = architecture
 
         self.opt_name = None
         self.batch_size = None
@@ -38,6 +40,7 @@ class Model:
         self.train_state = TrainState()
         self.losshistory = LossHistory()
         self.stop_training = False
+        #self.update_kan_grid = False
 
         # Backend-dependent attributes
         self.opt = None
@@ -262,10 +265,34 @@ class Model:
             else:
                 inputs = torch.as_tensor(inputs)
                 inputs.requires_grad_()
-            outputs_ = self.net(inputs)
+            #if self.update_kan_grid:
+            outputs_ = self.net(inputs, step=self.train_state.step)
+
+            #    self.update_kan_grid = False
+            #else:
+            #    outputs_ = self.net(inputs)
             # Data losses
             if targets is not None:
                 targets = torch.as_tensor(targets)
+            # NANs prevention for KAN
+            #if self.architecture == "kan":
+                #if torch.isnan(outputs_).any():
+                #if torch.where(torch.isnan(torch.sum(outputs_, dim=1)) == True)[0] is not None:
+                #print("NAN VALUE FOUND!!!!")
+                #id_ = ~torch.any(torch.isnan(outputs_), dim=-1)
+                #id_ = torch.where(torch.isnan(torch.sum(outputs_, dim=1)) == True)[0]
+                #if id_.any():
+                #    raise RuntimeError("NaN — training failed.")
+                #    print("NAN FOUND")
+                #selected_inputs = inputs[id_]
+                #selected_outputs = outputs_[id_]
+                #selected_targets = targets[id_] if targets is not None else None
+                #selected_outputs = self.net(selected_inputs)
+                #check = torch.where(torch.isnan(torch.sum(selected_outputs, dim=1)) == False)[0]
+                #if check.any():
+                #    print("RECOMPUTED OUTPUTS STILL HAS NAN")
+                #losses = losses_fn(selected_targets, selected_outputs, loss_fn, selected_inputs, self, self.net.auxiliary_vars)
+            
             # NOTE: edited
             losses = losses_fn(targets, outputs_, loss_fn, inputs, self, self.net.auxiliary_vars)
             if not isinstance(losses, list):
@@ -305,14 +332,39 @@ class Model:
 
         def train_step(inputs, targets):
             # NOTE: edited
-            def closure(*, skip_backward=False):
-                losses = outputs_losses_train(inputs, targets)[1]
-                self.opt.losses = losses
-                total_loss = torch.sum(losses)
-                if not skip_backward:
-                    self.opt.zero_grad()
-                    total_loss.backward()
-                return total_loss
+            def closure(*, skip_backward=False, reg_lambda=1.0e-2):
+                if self.architecture == "kan":
+                    #if self.train_state.step % 100 == 0 and self.train_state.step != 0:
+                    #    self.update_kan_grid = True
+                    losses = outputs_losses_train(inputs, targets)[1]
+                    #print(outputs)
+                    self.opt.losses = losses
+                    total_loss = torch.sum(losses)
+                    if torch.isnan(total_loss):
+                        dot = register_hooks(total_loss)
+                        #print(outputs)
+                    if hasattr(self.net, "regularization_loss"):
+                        reg_loss = self.net.regularization_loss()
+                        total_loss = total_loss + reg_lambda * reg_loss
+                    if not skip_backward:
+                        self.opt.zero_grad()
+                        total_loss.backward()
+                        if torch.isnan(total_loss):
+                            graph = dot()
+                            graph.layout()
+                            graph.draw("graph.png")
+                            print("GRAPH SAVED")
+                            raise RuntimeError("NaN — training failed.")
+                    return total_loss
+
+                else:
+                    losses = outputs_losses_train(inputs, targets)[1]
+                    self.opt.losses = losses
+                    total_loss = torch.sum(losses)
+                    if not skip_backward:
+                        self.opt.zero_grad()
+                        total_loss.backward()
+                    return total_loss
 
             loss = self.opt.step(closure)
             # NOTE: edited

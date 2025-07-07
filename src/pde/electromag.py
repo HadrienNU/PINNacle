@@ -1,11 +1,14 @@
 import numpy as np
-from scipy.special import kv
-from scipy.signal import fftconvolve
-from scipy.interpolate import RegularGridInterpolator
+from skfem import *
+from skfem.helpers import dot, grad
+from adaptmesh import triangulate
 
 import deepxde as dde
 from . import baseclass
 from deepxde import config
+
+import logging
+logger = logging.getLogger(__name__)
 
 class Magnetism_2D(baseclass.BasePDE):
     
@@ -143,24 +146,11 @@ class Electric_2D(baseclass.BasePDE):
         beta = np.sqrt(1 - 1 / self.gamma**2)
         self.k = 2 * np.pi * self.frequency / (beta * c)
 
-        grid_res = 256
-        x = np.linspace(self.bbox[0], self.bbox[1], grid_res)
-        y = np.linspace(self.bbox[2], self.bbox[3], grid_res)
-        dx = x[1] - x[0]
-        dy = y[1] - y[0]
-        X, Y = np.meshgrid(x, y)
-        rho = (self.Q / (2 * np.pi * self.sigma_x * self.sigma_y)) * np.exp(
-            -((X - self.beam[0])**2 / (2 * self.sigma_x**2) + (Y - self.beam[1])**2 / (2 * self.sigma_y**2))
-        )
-        R = np.sqrt((X - self.beam[0])**2 + (Y - self.beam[1])**2) + 1e-10
-        G = (1 / (2 * np.pi)) * kv(0, (self.k / self.gamma) * R)
-        Ez = (self.k / (self.eps0 * self.gamma**2)) * fftconvolve(rho, G, mode='same') * dx * dy
-        self.interp = RegularGridInterpolator((x, y), Ez.T, bounds_error=False, fill_value=0)
-
         def rho_transverse(x):
             x, y = x[:, 0:1], x[:, 1:2]
-            return (self.Q / (2 * np.pi * self.sigma_x * self.sigma_y)) * \
-                dde.backend.exp(-((x - self.beam[0])**2 / (2 * self.sigma_x**2) + (y - self.beam[1])**2 / (2 * self.sigma_y**2)))
+            return (self.Q / (2 * np.pi * self.sigma_x * self.sigma_y)) * dde.backend.exp(
+                -((x - self.beam[0])**2 / (2 * self.sigma_x**2) + (y - self.beam[1])**2 / (2 * self.sigma_y**2))
+            )
 
         # PDE
         def electric_pde(x, u):
@@ -174,12 +164,52 @@ class Electric_2D(baseclass.BasePDE):
         self.pde = electric_pde
         self.set_pdeloss(names=["pde"])
 
+        # Solution FEM
+        if form == "disk":
+            theta = np.linspace(0, 2 * np.pi, 250, endpoint=False)
+            x_disk = self.space[2] * np.cos(theta)
+            y_disk = self.space[2] * np.sin(theta)
+            points = np.vstack([x_disk, y_disk]).T
+            mesh = triangulate(points)
+        elif form == "ellipse":
+            theta = np.linspace(0, 2 * np.pi, 250, endpoint=False)
+            x_ellipse = self.space[2] * np.cos(theta)
+            y_ellipse = self.space[3] * np.sin(theta)
+            points = np.vstack([x_ellipse, y_ellipse]).T
+            mesh = triangulate(points)
+        elif form == "polygon":
+            mesh = MeshTri.init_lshaped().refined(5)
+        self.basis = Basis(mesh, ElementTriP1())
+
+        @BilinearForm
+        def helmholtz(u, v, w):
+            return dot(grad(u), grad(v)) + ((self.k**2) / (self.gamma**2)) * u * v
+        
+        @LinearForm
+        def rhs(v, w):
+            x, y = w.x[0], w.x[1]
+            rho = (self.Q / (2 * np.pi * self.sigma_x * self.sigma_y)) * np.exp(
+                -((x - self.beam[0])**2 / (2 * self.sigma_x**2) + (y - self.beam[1])**2 / (2 * self.sigma_y**2))
+            )
+            return (self.k / (self.eps0 * self.gamma**2)) * rho * v
+        
+        A = asm(helmholtz, self.basis)
+        b = asm(rhs, self.basis)
+
+        D = self.basis.get_dofs().all()
+        A, b = enforce(A, b, D=D)
+        self.u_fem = solve(A, b)
+
         # Reference Solution
         def reference_solution(xy):
-            Ez = self.interp(xy)
-            inside = self.geom.inside(xy)
-            Ez[~inside] = 0
-            return Ez.reshape(-1, 1)
+            values = np.zeros((xy.shape[0], 1))
+            for i, pt in enumerate(xy):
+                try:
+                    probe = self.basis.probes(pt.reshape(2, 1))
+                    values[i] = probe @ self.u_fem
+                except ValueError:
+                    continue
+            return values
         
         self.ref_sol = lambda xy: reference_solution(xy)
         

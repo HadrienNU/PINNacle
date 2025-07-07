@@ -7,23 +7,27 @@ os.environ["DDEBACKEND"] = "pytorch"
 
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.tri as tri
 import torch
 import deepxde as dde
+from scipy import interpolate
 from src.model.laaf import DNN_GAAF, DNN_LAAF
-#from src.model.kan import KAN
+from src.model.kan import KAN, build_splines_layers
+from src.model.kan_utils.utils import plot
 from src.optimizer import MultiAdam, LR_Adaptor, LR_Adaptor_NTK, Adam_LBFGS
+from src.pde.poisson import Poisson2D_Classic, PoissonBoltzmann2D
+from src.pde.burgers import Burgers1D
+from src.pde.kan_test import KAN_Test
 from src.pde.electromag import Magnetism_2D, Electric_2D
 from src.utils.args import parse_hidden_layers, parse_loss_weight
 from src.utils.callbacks import TesterCallback, PlotCallback, LossCallback
 from src.utils.rar import rar_wrapper
 
-pde_config = Electric_2D
+pde_config = Magnetism_2D
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='PINNBench trainer')
     parser.add_argument('--name', type=str, default="benchmark")
-    parser.add_argument('--device', type=str, default="0")  # set to "cpu" enables cpu training 
+    parser.add_argument('--device', type=str, default="0")  # set to "cpu" enables cpu training
     parser.add_argument('--seed', type=int, default=None)
     parser.add_argument('--hidden-layers', type=str, default="100*5")  #10*10
     parser.add_argument('--loss-weight', type=str, default="")
@@ -49,6 +53,8 @@ if __name__ == "__main__":
             pde = pde_config(form="ellipse")
         elif "polygon" in command_args.name:
             pde = pde_config(form="polygon")
+        else:
+            pde = pde_config()
         
         # pde.training_points()
         if command_args.method == "gepinn":
@@ -59,8 +65,15 @@ if __name__ == "__main__":
             net = DNN_LAAF(len(parse_hidden_layers(command_args)) - 1, parse_hidden_layers(command_args)[0], pde.input_dim, pde.output_dim)
         elif command_args.method == "gaaf":
             net = DNN_GAAF(len(parse_hidden_layers(command_args)) - 1, parse_hidden_layers(command_args)[0], pde.input_dim, pde.output_dim)
-        #elif command_args.method == "kan":
-            #net = KAN(build_splines_layers([2, 2, 1], grid_size=5, grid_alpha=1.0, scale_basis=0.25))
+        elif command_args.method == "kan":
+            net = KAN(build_splines_layers(
+                [pde.input_dim, 5, pde.output_dim], 
+                grid_size=10, 
+                grid_alpha=0.02, 
+                scale_basis=0.1, 
+                auto_grid_update=True, 
+                stop_grid_update_iter=(command_args.iter * 0.6)))
+            architecture = "kan"
         net = net.float()
 
         loss_weights = parse_loss_weight(command_args)
@@ -78,19 +91,20 @@ if __name__ == "__main__":
             opt = LR_Adaptor_NTK(opt, loss_weights, pde)
         elif command_args.method == "lbfgs":
             opt = Adam_LBFGS(net.parameters(), switch_epoch=5000, adam_param={'lr':command_args.lr})
+        elif command_args.method == "kan":
+            opt = Adam_LBFGS(net.parameters(), switch_epoch=10000, adam_param={'lr':command_args.lr}, lbfgs_param={
+                                                                                                            'lr':0.1, 
+                                                                                                            'history_size':15, 
+                                                                                                            'line_search_fn':"strong_wolfe", 
+                                                                                                            'tolerance_grad':1e-32, 
+                                                                                                            'tolerance_change':1e-32
+                                                                                                        })
 
-        model = pde.create_model(net)
+        model = pde.create_model(net, architecture)
         model.compile(opt, loss_weights=loss_weights)
         if command_args.method == "rar":
             model.train = rar_wrapper(pde, model, {"interval": 1000, "count": 1})
-        # the trainer calls model.train(**train_args)
-        return model
-
-    def get_model_others():
-        model = None
-        # create a model object which support .train() method, and param @model_save_path is required
-        # create the object based on command_args and return it to be trained
-        # schedule the task using trainer.add_task(get_model_other, {training args})
+            
         return model
 
     trainer.add_task(
@@ -110,106 +124,165 @@ if __name__ == "__main__":
     trainer.train_all()
     trainer.summary()
 
-    if pde_config == Magnetism_2D:
-        data = np.loadtxt(f"runs/{date_str}-{command_args.name}/0-0/model_output.txt", comments="#", delimiter=" ")
-        if "disk" in command_args.name:
-            pde = pde_config(form="disk")
-        elif "ellipse" in command_args.name:
-            pde = pde_config(form="ellipse")
-        elif "polygon" in command_args.name:
-            pde = pde_config(form="polygon")
-        new_data = pde.geom.random_points(5000)
+    for model in trainer.trained_models:
+        if pde_config == Magnetism_2D:
+            data = np.loadtxt(f"runs/{date_str}-{command_args.name}/0-0/model_output.txt", comments="#", delimiter=" ")
+            if "disk" in command_args.name:
+                pde = pde_config(form="disk")
+            elif "ellipse" in command_args.name:
+                pde = pde_config(form="ellipse")
+            elif "polygon" in command_args.name:
+                pde = pde_config(form="polygon")
+            else:
+                pde = pde_config()
+            new_data = pde.geom.random_points(5000)
 
-        model = get_model_dde()
-        model.restore(f"runs/{date_str}-{command_args.name}/0-0/{command_args.iter}.pt")
+            model.restore(f"runs/{date_str}-{command_args.name}/0-0/{command_args.iter}.pt")
 
-        x, y, u, v = data[:, 0], data[:, 1], data[:, 2], data[:, 3]
-        xy = data[:, 0:2]
-        ref_uv = pde.ref_sol(xy)
-        u_ref, v_ref = ref_uv[:, 0], ref_uv[:, 1]
-        output = model.predict(new_data)
-        x_new, y_new = new_data[:, 0], new_data[:, 1]
-        u_inference, v_inference = output[:, 0], output[:, 1]
+            x, y, u, v = data[:, 0], data[:, 1], data[:, 2], data[:, 3]
+            xy = data[:, 0:2]
+            ref_uv = pde.ref_sol(xy)
+            u_ref, v_ref = ref_uv[:, 0], ref_uv[:, 1]
+            output = model.predict(new_data)
+            x_new, y_new = new_data[:, 0], new_data[:, 1]
+            u_inference, v_inference = output[:, 0], output[:, 1]
 
-        color = np.sqrt((u)**2 + (v)**2)
-        color_ref = np.sqrt((u_ref)**2 + (v_ref)**2)
-        color_inference = np.sqrt((u_inference)**2 + (v_inference)**2)
+            color = np.sqrt((u)**2 + (v)**2)
+            color_ref = np.sqrt((u_ref)**2 + (v_ref)**2)
+            color_inference = np.sqrt((u_inference)**2 + (v_inference)**2)
 
-        plt.subplot(2, 2, 1)
-        plt.quiver(x, y, u_ref, v_ref, color_ref)
-        plt.gca().set_aspect("equal")
-        plt.title("Reference Solution Vectors")
+            plt.cla()
+            plt.figure()
 
-        plt.subplot(2, 2, 2)
-        plt.quiver(x, y, u, v, color)
-        plt.gca().set_aspect("equal")
-        plt.title("Model Output Vectors")
+            plt.subplot(2, 2, 1)
+            plt.quiver(x, y, u_ref, v_ref, color_ref)
+            plt.gca().set_aspect("equal")
+            plt.title("Reference Solution Vectors")
 
-        plt.subplot(2, 1, 2)
-        plt.quiver(x_new, y_new, u_inference, v_inference, color_inference)
-        plt.gca().set_aspect("equal")
-        plt.title("Inference Vectors")
+            plt.subplot(2, 2, 2)
+            plt.quiver(x, y, u, v, color)
+            plt.gca().set_aspect("equal")
+            plt.title("Model Output Vectors")
 
-        plt.tight_layout()
-        plt.savefig(f"runs/{date_str}-{command_args.name}/0-0/vectors", dpi=300)
-        plt.close()
-    
-    elif pde_config == Electric_2D:
-        data = np.loadtxt(f"runs/{date_str}-{command_args.name}/0-0/model_output.txt", comments="#", delimiter=" ")
-        if "disk" in command_args.name:
-            pde = pde_config(form="disk")
-        elif "ellipse" in command_args.name:
-            pde = pde_config(form="ellipse")
-        elif "polygon" in command_args.name:
-            pde = pde_config(form="polygon")
-        new_data = pde.geom.random_points(5000)
+            plt.subplot(2, 1, 2)
+            plt.quiver(x_new, y_new, u_inference, v_inference, color_inference)
+            plt.gca().set_aspect("equal")
+            plt.title("Inference Vectors")
 
-        model = get_model_dde()
-        model.restore(f"runs/{date_str}-{command_args.name}/0-0/{command_args.iter}.pt")
+            plt.tight_layout()
+            plt.savefig(f"runs/{date_str}-{command_args.name}/0-0/vectors", dpi=300)
+            plt.close()
+        
+        elif pde_config == Electric_2D:
+            data = np.loadtxt(f"runs/{date_str}-{command_args.name}/0-0/model_output.txt", comments="#", delimiter=" ")
+            if "disk" in command_args.name:
+                pde = pde_config(form="disk")
+            elif "ellipse" in command_args.name:
+                pde = pde_config(form="ellipse")
+            elif "polygon" in command_args.name:
+                pde = pde_config(form="polygon")
+            else:
+                pde = pde_config()
+            new_data = pde.geom.random_points(5000)
 
-        x, y, o = data[:, 0], data[:, 1], data[:, 2]
-        xy = data[:, 0:2]
-        o_ref = pde.ref_sol(xy)
-        o_inference = model.predict(new_data)
-        x_new, y_new = new_data[:, 0], new_data[:, 1]
+            model.restore(f"runs/{date_str}-{command_args.name}/0-0/{command_args.iter}.pt")
 
-        triangulation = tri.Triangulation(x, y)
-        triangulation_new = tri.Triangulation(x_new, y_new)
+            x, y, o = data[:, 0], data[:, 1], data[:, 2]
+            xy = data[:, 0:2]
+            o_ref = pde.ref_sol(xy)
+            o_inference = model.predict(new_data)
+            x_new, y_new = new_data[:, 0], new_data[:, 1]
 
-        triangles = triangulation.triangles
-        centroids = np.mean(xy[triangles], axis=1)
-        triangle_mask = ~pde.geom.inside(centroids)
-        triangulation.set_mask(triangle_mask)
+            xx = np.linspace(np.min(x), np.max(x), 100)
+            yy = np.linspace(np.min(y), np.max(y), 100)
+            xx, yy = np.meshgrid(xx, yy)
 
-        triangles_new = triangulation_new.triangles
-        centroids_new = np.mean(new_data[triangles_new], axis=1)
-        triangle_mask_new = ~pde.geom.inside(centroids_new)
-        triangulation_new.set_mask(triangle_mask_new)
+            xx_new = np.linspace(np.min(x_new), np.max(x_new), 100)
+            yy_new = np.linspace(np.min(y_new), np.max(y_new), 100)
+            xx_new, yy_new = np.meshgrid(xx_new, yy_new)
 
-        plt.subplot(2, 2, 1)
-        plt.tripcolor(triangulation, o_ref.ravel(), shading='gouraud', cmap='viridis')
-        plt.colorbar(label='Charge')
-        plt.xlabel("x")
-        plt.ylabel("y")
-        plt.axis("equal")
-        plt.title("Reference Solution Heatmap")
+            vals_ref = interpolate.griddata(np.array([x, y]).T, np.array(o_ref), (xx, yy), method='cubic')
+            vals_0_ref = interpolate.griddata(np.array([x, y]).T, np.array(o_ref), (xx, yy), method='nearest')
+            vals_ref[np.isnan(vals_ref)] = vals_0_ref[np.isnan(vals_ref)]
+            vals_ref[~pde.geom.inside(np.stack((xx, yy), axis=2))] = np.nan
+            vals_ref = vals_ref[::-1, :]
 
-        plt.subplot(2, 2, 2)
-        plt.tripcolor(triangulation, o.ravel(), shading='gouraud', cmap='viridis')
-        plt.colorbar(label='Charge')
-        plt.xlabel("x")
-        plt.ylabel("y")
-        plt.axis("equal")
-        plt.title("Model Output Heatmap")
+            vals = interpolate.griddata(np.array([x, y]).T, np.array(o), (xx, yy), method='cubic')
+            vals_0 = interpolate.griddata(np.array([x, y]).T, np.array(o), (xx, yy), method='nearest')
+            vals[np.isnan(vals)] = vals_0[np.isnan(vals)]
+            vals[~pde.geom.inside(np.stack((xx, yy), axis=2))] = np.nan
+            vals = vals[::-1, :]
 
-        plt.subplot(2, 1, 2)
-        plt.tripcolor(triangulation_new, o_inference.ravel(), shading='gouraud', cmap='viridis')
-        plt.colorbar(label='Charge')
-        plt.xlabel("x")
-        plt.ylabel("y")
-        plt.axis("equal")
-        plt.title("Inference Heatmap")
+            vals_inference = interpolate.griddata(np.array([x_new, y_new]).T, np.array(o_inference), (xx_new, yy_new), method='cubic')
+            vals_0_inference = interpolate.griddata(np.array([x_new, y_new]).T, np.array(o_inference), (xx_new, yy_new), method='nearest')
+            vals_inference[np.isnan(vals_inference)] = vals_0_inference[np.isnan(vals_inference)]
+            vals_inference[~pde.geom.inside(np.stack((xx_new, yy_new), axis=2))] = np.nan
+            vals_inference = vals_inference[::-1, :]
 
-        plt.tight_layout()
-        plt.savefig(f"runs/{date_str}-{command_args.name}/0-0/heatmaps", dpi=300)
-        plt.close()
+            plt.cla()
+            plt.figure()
+
+            plt.subplot(2, 2, 1)
+            plt.imshow(vals_ref, extent=[np.min(x), np.max(x), np.min(y), np.max(y)], aspect='auto', interpolation='bicubic')
+            plt.colorbar(label='Charge')
+            plt.xlabel("x")
+            plt.ylabel("y")
+            plt.axis("equal")
+            plt.title("Reference Solution Heatmap")
+
+            plt.subplot(2, 2, 2)
+            plt.imshow(vals, extent=[np.min(x), np.max(x), np.min(y), np.max(y)], aspect='auto', interpolation='bicubic')
+            plt.colorbar(label='Charge')
+            plt.xlabel("x")
+            plt.ylabel("y")
+            plt.axis("equal")
+            plt.title("Model Output Heatmap")
+
+            plt.subplot(2, 1, 2)
+            plt.imshow(vals_inference, extent=[np.min(x_new), np.max(x_new), np.min(y_new), np.max(y_new)], aspect='auto', interpolation='bicubic')
+            plt.colorbar(label='Charge')
+            plt.xlabel("x")
+            plt.ylabel("y")
+            plt.axis("equal")
+            plt.title("Inference Heatmap")
+
+            plt.tight_layout()
+            plt.savefig(f"runs/{date_str}-{command_args.name}/0-0/heatmaps", dpi=300)
+            plt.close()
+
+            x_in = torch.from_numpy(xy).float().to("cuda").requires_grad_()
+            u = model.net(x_in)
+            pde_out = pde.pde(x_in, u)[0].cpu().detach().numpy()
+            err = abs(pde_out)**2
+
+            vals_err = interpolate.griddata(np.array([x, y]).T, np.array(err), (xx, yy), method='cubic')
+            vals_0_err = interpolate.griddata(np.array([x, y]).T, np.array(err), (xx, yy), method='nearest')
+            vals_err[np.isnan(vals_err)] = vals_0_err[np.isnan(vals_err)]
+            vals_err[~pde.geom.inside(np.stack((xx, yy), axis=2))] = np.nan
+            vals_err = vals_err[::-1, :]
+
+            plt.cla()
+            plt.figure()
+            plt.imshow(vals_err, extent=[np.min(x), np.max(x), np.min(y), np.max(y)], aspect='auto', interpolation='bicubic')
+            plt.colorbar(label='Charge Err')
+            plt.xlabel("x")
+            plt.ylabel("y")
+            plt.axis("equal")
+            plt.title("PDE Output Error")
+            plt.tight_layout()
+            plt.savefig(f"runs/{date_str}-{command_args.name}/0-0/pde_err", dpi=300)
+            plt.close()      
+
+        if command_args.method == "kan":
+            data = np.loadtxt(f"runs/{date_str}-{command_args.name}/0-0/model_output.txt", comments="#", delimiter=" ")
+            xy = data[:, 0:2]
+
+            model.restore(f"runs/{date_str}-{command_args.name}/0-0/{command_args.iter}.pt")
+            plot(model.net, title="KAN", tick=False, norm_alpha=True, beta=10)
+            plt.savefig(f"runs/{date_str}-{command_args.name}/0-0/kan", dpi=300)
+
+            pruned_model = model.net.prune(mode="auto")
+            pruned_model(torch.tensor(xy, dtype=torch.float32))
+            plot(pruned_model, title="KAN after pruning", tick=False, norm_alpha=True, beta=10)
+            plt.savefig(f"runs/{date_str}-{command_args.name}/0-0/kan_pruned", dpi=300)
+            plt.close()

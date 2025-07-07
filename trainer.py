@@ -53,6 +53,7 @@ class Trainer:
         self.device = device.split(",")
         self.repeat = 1
         self.tasks = []
+        self.trained_models = []
 
     def set_repeat(self, repeat):
         self.repeat = repeat
@@ -96,6 +97,7 @@ class Trainer:
                 print(f"***** Begin #{i}-{j} *****")
                 get_model, train_args = dill.loads(data)
                 model = get_model()
+                self.trained_models.append(model)
                 model.train(**train_args, model_save_path=save_path)
                 print(f"*****  End #{i}-{j}  *****")
 

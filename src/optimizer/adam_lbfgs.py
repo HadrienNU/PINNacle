@@ -8,7 +8,7 @@ class Adam_LBFGS(Optimizer):
         params, 
         switch_epoch=10000, 
         adam_param={'lr': 1e-3, 'betas': (0.9, 0.999)}, 
-        lbfgs_param={'lr': 1, 'max_iter': 20}
+        lbfgs_param={'lr': 1, 'max_iter': 20, 'history_size': 100, 'line_search_fn': None, 'tolerance_grad': 1e-7, 'tolerance_change': 1e-9}
     ):
         self.params = list(params)
         self.switch_epoch=switch_epoch
