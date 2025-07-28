@@ -7,6 +7,8 @@ os.environ["DDEBACKEND"] = "pytorch"
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import cm
+from skfem.visuals.matplotlib import draw
 import torch
 import deepxde as dde
 from scipy import interpolate
@@ -14,15 +16,15 @@ from src.model.laaf import DNN_GAAF, DNN_LAAF
 from src.model.kan import KAN, build_splines_layers
 from src.model.kan_utils.utils import plot
 from src.optimizer import MultiAdam, LR_Adaptor, LR_Adaptor_NTK, Adam_LBFGS
-from src.pde.poisson import Poisson2D_Classic, PoissonBoltzmann2D
+from src.pde.poisson import Poisson2D_Classic, PoissonBoltzmann2D, Poisson_Ritz
 from src.pde.burgers import Burgers1D
-from src.pde.kan_test import KAN_Test
-from src.pde.electromag import Magnetism_2D, Electric_2D
+from src.pde.simple_test import KAN_Test, DeepRitz_Test
+from src.pde.electromag import Magnetism_2D, Electric_2D, Magnetism_Ritz, Electric_Ritz
 from src.utils.args import parse_hidden_layers, parse_loss_weight
 from src.utils.callbacks import TesterCallback, PlotCallback, LossCallback
 from src.utils.rar import rar_wrapper
 
-pde_config = Magnetism_2D
+pde_config = Electric_Ritz
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='PINNBench trainer')
@@ -46,6 +48,14 @@ if __name__ == "__main__":
     date_str = time.strftime('%m.%d-%H.%M.%S', time.localtime())
     trainer = Trainer(f"{date_str}-{command_args.name}", command_args.device)
 
+    activation_storage = []
+    relu_hooks = []
+    def get_relu_hook():
+        def hook(module, input, output):
+            # Store binary ReLU activation pattern (1 = active, 0 = inactive)
+            activation_storage.append((output > 0).int().cpu())
+        return hook
+
     def get_model_dde():
         if "disk" in command_args.name:
             pde = pde_config(form="disk")
@@ -60,6 +70,7 @@ if __name__ == "__main__":
         if command_args.method == "gepinn":
             pde.use_gepinn()
 
+        architecture = "mlp"
         net = dde.nn.FNN([pde.input_dim] + parse_hidden_layers(command_args) + [pde.output_dim], "tanh", "Glorot normal")
         if command_args.method == "laaf":
             net = DNN_LAAF(len(parse_hidden_layers(command_args)) - 1, parse_hidden_layers(command_args)[0], pde.input_dim, pde.output_dim)
@@ -74,6 +85,9 @@ if __name__ == "__main__":
                 auto_grid_update=True, 
                 stop_grid_update_iter=(command_args.iter * 0.6)))
             architecture = "kan"
+        elif command_args.method == "deepritz":
+            net = dde.nn.FNN([pde.input_dim] + parse_hidden_layers(command_args) + [pde.output_dim], "relu", "Glorot normal")
+            architecture = "deepritz"
         net = net.float()
 
         loss_weights = parse_loss_weight(command_args)
@@ -92,8 +106,8 @@ if __name__ == "__main__":
         elif command_args.method == "lbfgs":
             opt = Adam_LBFGS(net.parameters(), switch_epoch=5000, adam_param={'lr':command_args.lr})
         elif command_args.method == "kan":
-            opt = Adam_LBFGS(net.parameters(), switch_epoch=10000, adam_param={'lr':command_args.lr}, lbfgs_param={
-                                                                                                            'lr':0.1, 
+            opt = Adam_LBFGS(net.parameters(), switch_epoch=0, adam_param={'lr':command_args.lr}, lbfgs_param={
+                                                                                                            'lr':1, 
                                                                                                             'history_size':15, 
                                                                                                             'line_search_fn':"strong_wolfe", 
                                                                                                             'tolerance_grad':1e-32, 
@@ -101,7 +115,10 @@ if __name__ == "__main__":
                                                                                                         })
 
         model = pde.create_model(net, architecture)
-        model.compile(opt, loss_weights=loss_weights)
+        if architecture == "deepritz":
+            model.compile(opt, loss_weights=loss_weights, loss="ritz")
+        else:
+            model.compile(opt, loss_weights=loss_weights)
         if command_args.method == "rar":
             model.train = rar_wrapper(pde, model, {"interval": 1000, "count": 1})
             
@@ -125,7 +142,7 @@ if __name__ == "__main__":
     trainer.summary()
 
     for model in trainer.trained_models:
-        if pde_config == Magnetism_2D:
+        if pde_config == Magnetism_2D or pde_config == Magnetism_Ritz:
             data = np.loadtxt(f"runs/{date_str}-{command_args.name}/0-0/model_output.txt", comments="#", delimiter=" ")
             if "disk" in command_args.name:
                 pde = pde_config(form="disk")
@@ -173,7 +190,7 @@ if __name__ == "__main__":
             plt.savefig(f"runs/{date_str}-{command_args.name}/0-0/vectors", dpi=300)
             plt.close()
         
-        elif pde_config == Electric_2D:
+        elif pde_config == Electric_2D or pde_config == Electric_Ritz:
             data = np.loadtxt(f"runs/{date_str}-{command_args.name}/0-0/model_output.txt", comments="#", delimiter=" ")
             if "disk" in command_args.name:
                 pde = pde_config(form="disk")
@@ -286,3 +303,58 @@ if __name__ == "__main__":
             plot(pruned_model, title="KAN after pruning", tick=False, norm_alpha=True, beta=10)
             plt.savefig(f"runs/{date_str}-{command_args.name}/0-0/kan_pruned", dpi=300)
             plt.close()
+
+        elif command_args.method == "deepritz":
+            for module in model.net.modules():
+                relu_hooks.append(module.register_forward_hook(get_relu_hook()))
+
+            model.restore(f"runs/{date_str}-{command_args.name}/0-0/{command_args.iter}.pt")
+            pde = pde_config()
+
+            x_range = torch.linspace(pde.bbox[0], pde.bbox[1], 750)
+            y_range = torch.linspace(pde.bbox[2], pde.bbox[3], 750)
+            xx, yy = torch.meshgrid(x_range, y_range, indexing='ij')
+            grid_points = torch.stack([xx.reshape(-1), yy.reshape(-1)], dim=1)
+            inside_mask = pde.geom.inside(grid_points.cpu().numpy())
+            valid_points = grid_points[inside_mask]
+            _ = model.predict(valid_points.cpu().numpy())
+
+            # Combine all recorded ReLU layer activations into one binary vector per input
+            print([act.shape for act in activation_storage])
+            activation_patterns = torch.cat(activation_storage, dim=1)  # shape: [num_points, total_relus]
+            activation_storage.clear()  # Clean up
+
+            # Convert each activation pattern to a unique ID
+            pattern_ids = activation_patterns.numpy().dot(1 << np.arange(activation_patterns.shape[1]))
+            unique_ids, remapped_ids = np.unique(pattern_ids, return_inverse=True)
+            print("Number of region", len(unique_ids))
+            remapped_ids += 1  # So it starts from 1 instead of 0
+            
+            num_base_colors = 40
+            base_cmap = cm.get_cmap('tab20', num_base_colors)
+
+            # Map activation region IDs using modulo
+            modulo_color = remapped_ids % num_base_colors
+
+            if pde_config == Electric_Ritz:
+                fem_mesh = pde.mesh
+                plt.figure(figsize=(8, 6))
+                draw(fem_mesh)
+                plt.scatter(valid_points[:, 0].cpu().numpy(), valid_points[:, 1].cpu().numpy(), c=modulo_color, cmap=base_cmap, s=0.2)
+                #plt.colorbar(label='Linear Region ID (Activation Pattern)')
+                plt.title('Linear Regions via ReLU Activation Patterns (Hook-Based) and FEM Mesh')
+                plt.xlabel('x1')
+                plt.ylabel('x2')
+                plt.tight_layout()
+                plt.savefig(f"runs/{date_str}-{command_args.name}/0-0/activation_pattern_mesh", dpi=300)
+                plt.close()  
+
+            plt.figure(figsize=(8, 6))
+            plt.scatter(valid_points[:, 0].cpu().numpy(), valid_points[:, 1].cpu().numpy(), c=modulo_color, cmap=base_cmap, s=0.2)
+            #plt.colorbar(label='Linear Region ID (Activation Pattern)')
+            plt.title('Linear Regions via ReLU Activation Patterns (Hook-Based)')
+            plt.xlabel('x1')
+            plt.ylabel('x2')
+            plt.tight_layout()
+            plt.savefig(f"runs/{date_str}-{command_args.name}/0-0/activation_pattern", dpi=300)
+            plt.close()  

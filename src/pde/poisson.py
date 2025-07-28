@@ -90,6 +90,17 @@ class Poisson2D_Classic(baseclass.BasePDE):
         self.training_points()  # default
 
 
+class Poisson_Ritz(Poisson2D_Classic):
+    def __init__(self, datapath="ref/poisson1_cg_data.dat", scale=1):
+        super().__init__(datapath="ref/poisson1_cg_data.dat", scale=1)
+
+        def pde(x, u):
+            u_x = dde.grad.jacobian(u, x, i=0, j=0)
+            u_y = dde.grad.jacobian(u, x, i=0, j=1)
+
+            return [0.5 * (u_x**2 + u_y**2)]
+
+        self.pde = pde
 
 
 class PoissonBoltzmann2D(baseclass.BasePDE):

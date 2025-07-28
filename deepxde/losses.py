@@ -37,6 +37,10 @@ def zero(*_):
     return tf.constant(0, dtype=config.real(tf))
 
 
+def ritz(_, output):
+    return bkd.reduce_mean(output)
+
+
 LOSS_DICT = {
     "mean absolute error": mean_absolute_error,
     "MAE": mean_absolute_error,
@@ -50,6 +54,7 @@ LOSS_DICT = {
     "mean l2 relative error": mean_l2_relative_error,
     "softmax cross entropy": softmax_cross_entropy,
     "zero": zero,
+    "ritz": ritz,
 }
 
 

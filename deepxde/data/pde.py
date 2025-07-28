@@ -5,6 +5,7 @@ from .. import backend as bkd
 from .. import config
 from ..backend import backend_name
 from ..utils import get_num_args, run_if_all_none
+from .. import losses as losses_module
 
 
 class PDE(Data):
@@ -88,6 +89,7 @@ class PDE(Data):
         self.geom = geometry
         self.pde = pde
         self.bcs = bcs if isinstance(bcs, (list, tuple)) else [bcs]
+        self.mse = losses_module.get("mse")
 
         self.num_domain = num_domain
         self.num_boundary = num_boundary
@@ -136,7 +138,8 @@ class PDE(Data):
                 f = [f]
 
         if not isinstance(loss_fn, (list, tuple)):
-            loss_fn = [loss_fn] * (len(f) + len(self.bcs))
+            #loss_fn = [loss_fn] * (len(f) + len(self.bcs))
+            loss_fn = [loss_fn] * len(f) + [self.mse] * len(self.bcs) #ENSURE MSE FOR BDRY POINTS (DEEPRITZ)
         elif len(loss_fn) != len(f) + len(self.bcs):
             raise ValueError(
                 "There are {} errors, but only {} losses.".format(

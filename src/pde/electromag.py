@@ -110,6 +110,14 @@ class Magnetism_2D(baseclass.BasePDE):
         self.training_points()
 
 
+class Magnetism_Ritz(Magnetism_2D):
+    def __init__(self, bbox=[-1, 1, -1, 1], mu0=4*np.pi*1e-7, I=100000, sigma=0.02, form="disk"):
+        super().__init__(bbox=[-1, 1, -1, 1], mu0=4*np.pi*1e-7, I=100000, sigma=0.02, form="disk")
+
+        #def pde(x, u):
+            
+
+
 class Electric_2D(baseclass.BasePDE):
     
     def __init__(self, bbox=[-1, 1, -1, 1], gamma=100.0, frequency = 1e12, Q=1e-9, eps0=8.854e-12, sigma_x=0.3, sigma_y=0.3, form="ellipse"):
@@ -170,16 +178,16 @@ class Electric_2D(baseclass.BasePDE):
             x_disk = self.space[2] * np.cos(theta)
             y_disk = self.space[2] * np.sin(theta)
             points = np.vstack([x_disk, y_disk]).T
-            mesh = triangulate(points)
+            self.mesh = triangulate(points)
         elif form == "ellipse":
             theta = np.linspace(0, 2 * np.pi, 250, endpoint=False)
             x_ellipse = self.space[2] * np.cos(theta)
             y_ellipse = self.space[3] * np.sin(theta)
             points = np.vstack([x_ellipse, y_ellipse]).T
-            mesh = triangulate(points)
+            self.mesh = triangulate(points)
         elif form == "polygon":
-            mesh = MeshTri.init_lshaped().refined(5)
-        self.basis = Basis(mesh, ElementTriP1())
+            self.mesh = MeshTri.init_lshaped().refined(5)
+        self.basis = Basis(self.mesh, ElementTriP1())
 
         @BilinearForm
         def helmholtz(u, v, w):
@@ -231,3 +239,24 @@ class Electric_2D(baseclass.BasePDE):
 
         # Training Config
         self.training_points()
+
+
+class Electric_Ritz(Electric_2D):
+    def __init__(self, bbox=[-1, 1, -1, 1], gamma=100, frequency=1000000000000, Q=1e-9, eps0=8.854e-12, sigma_x=0.3, sigma_y=0.3, form="ellipse"):
+        super().__init__(bbox, gamma, frequency, Q, eps0, sigma_x, sigma_y, form)
+
+        def rho_transverse(x):
+            x, y = x[:, 0:1], x[:, 1:2]
+            return (self.Q / (2 * np.pi * self.sigma_x * self.sigma_y)) * dde.backend.exp(
+                -((x - self.beam[0])**2 / (2 * self.sigma_x**2) + (y - self.beam[1])**2 / (2 * self.sigma_y**2))
+            )
+
+        def pde(x, u):
+            u_x = dde.grad.jacobian(u, x, i=0, j=0)
+            u_y = dde.grad.jacobian(u, x, i=0, j=1)
+            
+            rhs = (self.k / (self.eps0 * self.gamma**2)) * rho_transverse(x)
+
+            return [0.5 * (u_x**2 + u_y**2) + 0.5 * (self.k**2 / self.gamma**2) * u**2 - rhs * u]
+        
+        self.pde = pde

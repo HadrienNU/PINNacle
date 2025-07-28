@@ -40,7 +40,6 @@ class Model:
         self.train_state = TrainState()
         self.losshistory = LossHistory()
         self.stop_training = False
-        #self.update_kan_grid = False
 
         # Backend-dependent attributes
         self.opt = None
@@ -266,7 +265,10 @@ class Model:
                 inputs = torch.as_tensor(inputs)
                 inputs.requires_grad_()
             #if self.update_kan_grid:
-            outputs_ = self.net(inputs, step=self.train_state.step)
+            if self.architecture == "kan":
+                outputs_ = self.net(inputs, step=self.train_state.step)
+            else:
+                outputs_ = self.net(inputs)
 
             #    self.update_kan_grid = False
             #else:
