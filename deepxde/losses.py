@@ -38,7 +38,7 @@ def zero(*_):
 
 
 def ritz(_, output):
-    return bkd.reduce_mean(output)
+    return bkd.reduce_mean(output) + 10
 
 
 LOSS_DICT = {

@@ -120,7 +120,7 @@ class Magnetism_Ritz(Magnetism_2D):
 
 class Electric_2D(baseclass.BasePDE):
     
-    def __init__(self, bbox=[-1, 1, -1, 1], gamma=100.0, frequency = 1e12, Q=1e-9, eps0=8.854e-12, sigma_x=0.3, sigma_y=0.3, form="ellipse"):
+    def __init__(self, bbox=[-1, 1, -1, 1], gamma=100.0, frequency = 1e12, Q=1e-9, eps0=8.854e-12, sigma_x=0.3, sigma_y=0.3, form="disk"):
         super().__init__()
 
         # Output Dim
@@ -134,8 +134,8 @@ class Electric_2D(baseclass.BasePDE):
             self.beam = [0, 0]
             self.geom = dde.geometry.Disk(self.space[0:2], self.space[2])
         elif form == "ellipse":
-            self.space = [0, 0, 1, 0.6]
-            self.beam = [0.3, 0]
+            self.space = [0, 0, 0.6, 1]
+            self.beam = [0, 0.3]
             self.geom = dde.geometry.Ellipse(self.space[0:2], self.space[2], self.space[3])
         elif form == "polygon":
             self.space = [0, 1, 0, 1]
@@ -242,7 +242,7 @@ class Electric_2D(baseclass.BasePDE):
 
 
 class Electric_Ritz(Electric_2D):
-    def __init__(self, bbox=[-1, 1, -1, 1], gamma=100, frequency=1000000000000, Q=1e-9, eps0=8.854e-12, sigma_x=0.3, sigma_y=0.3, form="ellipse"):
+    def __init__(self, bbox=[-1, 1, -1, 1], gamma=100, frequency=1000000000000, Q=1e-9, eps0=8.854e-12, sigma_x=0.3, sigma_y=0.3, form="disk"):
         super().__init__(bbox, gamma, frequency, Q, eps0, sigma_x, sigma_y, form)
 
         def rho_transverse(x):

@@ -1,5 +1,8 @@
 import numpy as np
 import torch
+import skfem
+from skfem import MeshTri, BilinearForm, LinearForm, asm, solve
+from skfem.helpers import dot, grad
 
 import deepxde as dde
 from . import baseclass
@@ -65,6 +68,84 @@ class Poisson2D_Classic(baseclass.BasePDE):
             return data
 
         self.load_ref_data(datapath, transform_fn=transform_fn)
+
+        #REF SOL
+        nx, ny = 50, 50  # mesh resolution
+        x = np.linspace(self.bbox[0], self.bbox[1], nx)
+        y = np.linspace(self.bbox[2], self.bbox[3], ny)
+        xx, yy = np.meshgrid(x, y)
+        points = np.vstack([xx.ravel(), yy.ravel()]).T
+
+        # Simple structured mesh for the rectangle
+        mesh = MeshTri.init_tensor(np.linspace(self.bbox[0], self.bbox[1], nx),
+                                np.linspace(self.bbox[2], self.bbox[3], ny))
+        
+        # Define circular holes
+        holes = np.array([[0.3, 0.3, 0.1], [-0.3, 0.3, 0.1], [0.3, -0.3, 0.1], [-0.3, -0.3, 0.1]]) * scale
+
+        # Mark elements inside disks for removal
+        mask = np.ones(mesh.t.shape[1], dtype=bool)
+        for hole in holes:
+            cx, cy, r = hole
+            # compute element centers
+            x_centers = mesh.p[0, mesh.t].mean(axis=0)
+            y_centers = mesh.p[1, mesh.t].mean(axis=0)
+            mask &= ((x_centers - cx)**2 + (y_centers - cy)**2) > r**2
+
+        mesh = skfem.MeshTri(mesh.p, mesh.t[:, mask])
+
+        # Define finite element space
+        element = skfem.ElementTriP1()  # linear elements
+        basis = skfem.InteriorBasis(mesh, element)
+
+        # Define bilinear form (Laplace)
+        @BilinearForm
+        def laplace_poisson(u, v, w):
+            return dot(grad(u), grad(v))
+
+        A = asm(laplace_poisson, basis)
+
+        # Define linear form (RHS = 0)
+        @LinearForm
+        def rhs(v, w):
+            return 0.0
+
+        b = asm(rhs, basis)
+
+        # Identify Dirichlet boundaries
+        def rec_boundary(x):
+            return np.isclose(x[0], self.bbox[0]) | np.isclose(x[0], self.bbox[1]) | np.isclose(x[1], self.bbox[2]) | np.isclose(x[1], self.bbox[3])
+
+        def circ_boundary(x):
+            inside_rect = ~rec_boundary(x)
+            inside_hole = np.zeros_like(x[0], dtype=bool)
+            for hole in holes:
+                cx, cy, r = hole
+                inside_hole |= (x[0]-cx)**2 + (x[1]-cy)**2 <= r**2
+            return inside_rect & inside_hole
+
+        # Apply Dirichlet conditions
+        D = basis.find_dofs({'Dirichlet': rec_boundary})
+        b[D] = 1.0  # u=1 on rectangle boundary
+
+        D_circ = basis.find_dofs({'Dirichlet': circ_boundary})
+        b[D_circ] = 0.0  # u=0 on circular holes
+
+        # Solve linear system
+        self.u_fem = solve(A, b)
+
+        # Reference Solution
+        def reference_solution(xy):
+            values = np.zeros((xy.shape[0], 1))
+            for i, pt in enumerate(xy):
+                try:
+                    probe = self.basis.probes(pt.reshape(2, 1))
+                    values[i] = probe @ self.u_fem
+                except ValueError:
+                    continue
+            return values
+        
+        self.ref_sol = lambda xy: reference_solution(xy)
 
         def rec_boundary(x, on_boundary):
             return on_boundary and (

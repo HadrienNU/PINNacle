@@ -8,6 +8,7 @@ os.environ["DDEBACKEND"] = "pytorch"
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cm
+import matplotlib as mpl
 from skfem.visuals.matplotlib import draw
 import torch
 import deepxde as dde
@@ -24,14 +25,14 @@ from src.utils.args import parse_hidden_layers, parse_loss_weight
 from src.utils.callbacks import TesterCallback, PlotCallback, LossCallback
 from src.utils.rar import rar_wrapper
 
-pde_config = Electric_Ritz
+pde_config = Burgers1D
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='PINNBench trainer')
     parser.add_argument('--name', type=str, default="benchmark")
     parser.add_argument('--device', type=str, default="0")  # set to "cpu" enables cpu training
     parser.add_argument('--seed', type=int, default=None)
-    parser.add_argument('--hidden-layers', type=str, default="100*5")  #10*10
+    parser.add_argument('--hidden-layers', type=str, default="100*5")
     parser.add_argument('--loss-weight', type=str, default="")
     parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--iter', type=int, default=20000)
@@ -88,6 +89,20 @@ if __name__ == "__main__":
         elif command_args.method == "deepritz":
             net = dde.nn.FNN([pde.input_dim] + parse_hidden_layers(command_args) + [pde.output_dim], "relu", "Glorot normal")
             architecture = "deepritz"
+        elif command_args.method == "kan-deepritz":
+            net = KAN(build_splines_layers(
+                [pde.input_dim, 5, pde.output_dim], 
+                grid_size=10, 
+                grid_alpha=0.02, 
+                scale_basis=0.1, 
+                auto_grid_update=True, 
+                stop_grid_update_iter=(command_args.iter * 0.6),
+                spline_order=1,
+                sb_trainable=False,
+                scale_base=0,
+                base_activation=torch.nn.ReLU
+                ))
+            architecture = "kan-deepritz"
         net = net.float()
 
         loss_weights = parse_loss_weight(command_args)
@@ -114,8 +129,9 @@ if __name__ == "__main__":
                                                                                                             'tolerance_change':1e-32
                                                                                                         })
 
-        model = pde.create_model(net, architecture)
-        if architecture == "deepritz":
+        exp_name = f"{date_str}-{command_args.name}"
+        model = pde.create_model(net, architecture, exp_name)
+        if architecture == "deepritz" or architecture == "kan-deepritz":
             model.compile(opt, loss_weights=loss_weights, loss="ritz")
         else:
             model.compile(opt, loss_weights=loss_weights)
@@ -142,6 +158,9 @@ if __name__ == "__main__":
     trainer.summary()
 
     for model in trainer.trained_models:
+        n_params = sum(p.numel() for p in model.net.parameters() if p.requires_grad)
+        print("Trainable parameters:", n_params)
+
         if pde_config == Magnetism_2D or pde_config == Magnetism_Ritz:
             data = np.loadtxt(f"runs/{date_str}-{command_args.name}/0-0/model_output.txt", comments="#", delimiter=" ")
             if "disk" in command_args.name:
@@ -153,44 +172,73 @@ if __name__ == "__main__":
             else:
                 pde = pde_config()
             new_data = pde.geom.random_points(5000)
+            #new_data_bound = pde.geom.random_boundary_points(1000)
+            #new_data = np.vstack([new_data_in, new_data_bound])
 
             model.restore(f"runs/{date_str}-{command_args.name}/0-0/{command_args.iter}.pt")
 
             x, y, u, v = data[:, 0], data[:, 1], data[:, 2], data[:, 3]
             xy = data[:, 0:2]
-            ref_uv = pde.ref_sol(xy)
+            ref_uv = pde.ref_sol(new_data)
             u_ref, v_ref = ref_uv[:, 0], ref_uv[:, 1]
             output = model.predict(new_data)
             x_new, y_new = new_data[:, 0], new_data[:, 1]
             u_inference, v_inference = output[:, 0], output[:, 1]
+            diff_u = u_inference - u_ref
+            diff_v = v_inference - v_ref
+            # Relative error magnitude
+            ref_mag = np.sqrt(u_ref**2 + v_ref**2)
+            diff_color = np.sqrt(diff_u**2 + diff_v**2) / (ref_mag + 1e-12)  # avoid division by 0
+            norm_diff = mpl.colors.Normalize(vmin=0, vmax=1)  # 0–100% error
+
 
             color = np.sqrt((u)**2 + (v)**2)
             color_ref = np.sqrt((u_ref)**2 + (v_ref)**2)
             color_inference = np.sqrt((u_inference)**2 + (v_inference)**2)
+            diff_color = np.sqrt(diff_u**2 + diff_v**2)
 
             plt.cla()
-            plt.figure()
+            fig, axes = plt.subplots(1, 3, figsize=(18, 5))
 
-            plt.subplot(2, 2, 1)
-            plt.quiver(x, y, u_ref, v_ref, color_ref)
-            plt.gca().set_aspect("equal")
-            plt.title("Reference Solution Vectors")
+            # Create a normalization for shared scale
+            vmin = min(color_ref.min(), color_inference.min())
+            vmax = max(color_ref.max(), color_inference.max())
+            norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
+            cmap = plt.cm.viridis   # or any cmap you like
 
-            plt.subplot(2, 2, 2)
-            plt.quiver(x, y, u, v, color)
-            plt.gca().set_aspect("equal")
-            plt.title("Model Output Vectors")
+            # Reference
+            q1 = axes[0].quiver(x_new, y_new, u_ref, v_ref, color_ref, cmap=cmap, norm=norm)
+            axes[0].set_aspect("equal")
+            axes[0].set_title("Reference Solution Vectors")
 
-            plt.subplot(2, 1, 2)
-            plt.quiver(x_new, y_new, u_inference, v_inference, color_inference)
-            plt.gca().set_aspect("equal")
-            plt.title("Inference Vectors")
+            # Inference
+            q2 = axes[1].quiver(x_new, y_new, u_inference, v_inference, color_inference, cmap=cmap, norm=norm)
+            axes[1].set_aspect("equal")
+            axes[1].set_title("Model Inference Vectors")
 
-            plt.tight_layout()
-            plt.savefig(f"runs/{date_str}-{command_args.name}/0-0/vectors", dpi=300)
+            # Shared colorbar for reference & inference
+            cbar = fig.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap=cmap), ax=axes[0:2],
+                                orientation="vertical", fraction=0.046, pad=0.04)
+            cbar.set_label("Magnitude")
+
+            # Difference (independent color scale)
+            q3 = axes[2].quiver(
+                x_new, y_new, diff_u, diff_v, diff_color,
+                cmap=plt.cm.viridis, norm=norm_diff
+            )
+            axes[2].set_aspect("equal")
+            axes[2].set_title("Relative Error Vectors")
+            fig.colorbar(
+                mpl.cm.ScalarMappable(norm=norm_diff, cmap=plt.cm.viridis),
+                ax=axes[2], orientation="vertical", fraction=0.046, pad=0.04,
+                label="Relative Error"
+            )
+
+            #plt.tight_layout()
+            plt.savefig(f"runs/{date_str}-{command_args.name}/0-0/vectors", dpi=800)
             plt.close()
         
-        elif pde_config == Electric_2D or pde_config == Electric_Ritz:
+        elif pde_config == Electric_2D or pde_config == Electric_Ritz or pde_config == KAN_Test or pde_config == DeepRitz_Test or pde_config == Poisson2D_Classic:
             data = np.loadtxt(f"runs/{date_str}-{command_args.name}/0-0/model_output.txt", comments="#", delimiter=" ")
             if "disk" in command_args.name:
                 pde = pde_config(form="disk")
@@ -206,7 +254,7 @@ if __name__ == "__main__":
 
             x, y, o = data[:, 0], data[:, 1], data[:, 2]
             xy = data[:, 0:2]
-            o_ref = pde.ref_sol(xy)
+            o_ref = pde.ref_sol(new_data)
             o_inference = model.predict(new_data)
             x_new, y_new = new_data[:, 0], new_data[:, 1]
 
@@ -218,10 +266,10 @@ if __name__ == "__main__":
             yy_new = np.linspace(np.min(y_new), np.max(y_new), 100)
             xx_new, yy_new = np.meshgrid(xx_new, yy_new)
 
-            vals_ref = interpolate.griddata(np.array([x, y]).T, np.array(o_ref), (xx, yy), method='cubic')
-            vals_0_ref = interpolate.griddata(np.array([x, y]).T, np.array(o_ref), (xx, yy), method='nearest')
+            vals_ref = interpolate.griddata(np.array([x_new, y_new]).T, np.array(o_ref), (xx_new, yy_new), method='cubic')
+            vals_0_ref = interpolate.griddata(np.array([x_new, y_new]).T, np.array(o_ref), (xx_new, yy_new), method='nearest')
             vals_ref[np.isnan(vals_ref)] = vals_0_ref[np.isnan(vals_ref)]
-            vals_ref[~pde.geom.inside(np.stack((xx, yy), axis=2))] = np.nan
+            vals_ref[~pde.geom.inside(np.stack((xx_new, yy_new), axis=2))] = np.nan
             vals_ref = vals_ref[::-1, :]
 
             vals = interpolate.griddata(np.array([x, y]).T, np.array(o), (xx, yy), method='cubic')
@@ -236,35 +284,66 @@ if __name__ == "__main__":
             vals_inference[~pde.geom.inside(np.stack((xx_new, yy_new), axis=2))] = np.nan
             vals_inference = vals_inference[::-1, :]
 
+            vmin = min(np.nanmin(vals_ref), np.nanmin(vals_inference))
+            vmax = max(np.nanmax(vals_ref), np.nanmax(vals_inference))
+            norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
+            cmap = plt.cm.viridis
+
             plt.cla()
-            plt.figure()
+            fig, axes = plt.subplots(1, 3, figsize=(25, 5))
 
-            plt.subplot(2, 2, 1)
-            plt.imshow(vals_ref, extent=[np.min(x), np.max(x), np.min(y), np.max(y)], aspect='auto', interpolation='bicubic')
-            plt.colorbar(label='Charge')
-            plt.xlabel("x")
-            plt.ylabel("y")
-            plt.axis("equal")
-            plt.title("Reference Solution Heatmap")
+            # Reference heatmap
+            im1 = axes[0].imshow(
+                vals_ref,
+                extent=[np.min(x_new), np.max(x_new), np.min(y_new), np.max(y_new)],
+                aspect="auto", interpolation="bicubic", cmap=cmap, norm=norm
+            )
+            axes[0].set_xlabel("x")
+            axes[0].set_ylabel("y")
+            axes[0].set_title("Reference Solution Heatmap")
+            axes[0].axis("equal")
 
-            plt.subplot(2, 2, 2)
-            plt.imshow(vals, extent=[np.min(x), np.max(x), np.min(y), np.max(y)], aspect='auto', interpolation='bicubic')
-            plt.colorbar(label='Charge')
-            plt.xlabel("x")
-            plt.ylabel("y")
-            plt.axis("equal")
-            plt.title("Model Output Heatmap")
+            # Inference heatmap
+            im2 = axes[1].imshow(
+                vals_inference,
+                extent=[np.min(x_new), np.max(x_new), np.min(y_new), np.max(y_new)],
+                aspect="auto", interpolation="bicubic", cmap=cmap, norm=norm
+            )
+            axes[1].set_xlabel("x")
+            axes[1].set_ylabel("y")
+            axes[1].set_title("Inference Heatmap")
+            axes[1].axis("equal")
 
-            plt.subplot(2, 1, 2)
-            plt.imshow(vals_inference, extent=[np.min(x_new), np.max(x_new), np.min(y_new), np.max(y_new)], aspect='auto', interpolation='bicubic')
-            plt.colorbar(label='Charge')
-            plt.xlabel("x")
-            plt.ylabel("y")
-            plt.axis("equal")
-            plt.title("Inference Heatmap")
+            # Shared colorbar for ref & inference
+            cbar = fig.colorbar(
+                mpl.cm.ScalarMappable(norm=norm, cmap=cmap),
+                ax=axes[0:2], orientation="vertical", fraction=0.046, pad=0.04
+            )
+            cbar.set_label("Magnitude")
 
-            plt.tight_layout()
-            plt.savefig(f"runs/{date_str}-{command_args.name}/0-0/heatmaps", dpi=300)
+            # -----------------------------
+            # Error heatmap
+            vals_diff = vals_inference - vals_ref # error
+            vmin = np.nanmin(vals_diff)
+            vmax = np.nanmax(vals_diff)
+            norm_diff = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
+            im3 = axes[2].imshow(
+                vals_diff,
+                extent=[np.min(x_new), np.max(x_new), np.min(y_new), np.max(y_new)],
+                aspect="auto", interpolation="bicubic", cmap=plt.cm.viridis, norm=norm_diff
+            )
+            axes[2].set_xlabel("x")
+            axes[2].set_ylabel("y")
+            axes[2].set_title("Difference (Inference - Reference)")
+            axes[2].axis("equal")
+
+            fig.colorbar(
+                mpl.cm.ScalarMappable(norm=norm_diff, cmap=plt.cm.viridis),
+                ax=axes[2], orientation="vertical", fraction=0.046, pad=0.04,
+                label="Difference Error"
+            )
+
+            plt.savefig(f"runs/{date_str}-{command_args.name}/0-0/heatmaps", dpi=800)
             plt.close()
 
             x_in = torch.from_numpy(xy).float().to("cuda").requires_grad_()
@@ -290,7 +369,7 @@ if __name__ == "__main__":
             plt.savefig(f"runs/{date_str}-{command_args.name}/0-0/pde_err", dpi=300)
             plt.close()      
 
-        if command_args.method == "kan":
+        if command_args.method == "kan" or command_args.method == "kan-deepritz":
             data = np.loadtxt(f"runs/{date_str}-{command_args.name}/0-0/model_output.txt", comments="#", delimiter=" ")
             xy = data[:, 0:2]
 
@@ -299,12 +378,12 @@ if __name__ == "__main__":
             plt.savefig(f"runs/{date_str}-{command_args.name}/0-0/kan", dpi=300)
 
             pruned_model = model.net.prune(mode="auto")
-            pruned_model(torch.tensor(xy, dtype=torch.float32))
+            #pruned_model(torch.tensor(xy, dtype=torch.float32))
             plot(pruned_model, title="KAN after pruning", tick=False, norm_alpha=True, beta=10)
             plt.savefig(f"runs/{date_str}-{command_args.name}/0-0/kan_pruned", dpi=300)
             plt.close()
 
-        elif command_args.method == "deepritz":
+        if command_args.method == "deepritz" or command_args.method == "kan-deepritz":
             for module in model.net.modules():
                 relu_hooks.append(module.register_forward_hook(get_relu_hook()))
 
@@ -346,6 +425,7 @@ if __name__ == "__main__":
                 plt.xlabel('x1')
                 plt.ylabel('x2')
                 plt.tight_layout()
+                plt.axis("equal")
                 plt.savefig(f"runs/{date_str}-{command_args.name}/0-0/activation_pattern_mesh", dpi=300)
                 plt.close()  
 
@@ -356,5 +436,6 @@ if __name__ == "__main__":
             plt.xlabel('x1')
             plt.ylabel('x2')
             plt.tight_layout()
+            plt.axis("equal")
             plt.savefig(f"runs/{date_str}-{command_args.name}/0-0/activation_pattern", dpi=300)
             plt.close()  

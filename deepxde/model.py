@@ -5,6 +5,9 @@ import logging
 from collections import OrderedDict
 
 import numpy as np
+import torch
+import matplotlib.pyplot as plt
+from matplotlib import cm
 
 from . import config
 from . import display
@@ -27,10 +30,11 @@ class Model:
         net: ``deepxde.nn.NN`` instance.
     """
 
-    def __init__(self, data, net, architecture="mlp"):
+    def __init__(self, data, net, architecture="mlp", exp_name=None):
         self.data = data
         self.net = net
         self.architecture = architecture
+        self.exp_name = exp_name
 
         self.opt_name = None
         self.batch_size = None
@@ -685,6 +689,68 @@ class Model:
 
             if self.stop_training:
                 break
+
+            if self.architecture == "deepritz" or self.architecture == "kan-deepritz":
+                if i % 1000 == 0:
+                    activation_storage = []
+                    relu_hooks = []
+                    def get_relu_hook():
+                        def hook(module, input, output):
+                            # Store binary ReLU activation pattern (1 = active, 0 = inactive)
+                            activation_storage.append((output > 0).int().cpu())
+                        return hook
+
+                    for module in self.net.modules():
+                        relu_hooks.append(module.register_forward_hook(get_relu_hook()))
+
+                    #model.restore(f"runs/{date_str}-{command_args.name}/0-0/{command_args.iter}.pt")
+                    #pde = pde_config()
+
+                    x_range = torch.linspace(self.pde.bbox[0], self.pde.bbox[1], 750)
+                    y_range = torch.linspace(self.pde.bbox[2], self.pde.bbox[3], 750)
+                    xx, yy = torch.meshgrid(x_range, y_range, indexing='ij')
+                    grid_points = torch.stack([xx.reshape(-1), yy.reshape(-1)], dim=1)
+                    inside_mask = self.pde.geom.inside(grid_points.cpu().numpy())
+                    valid_points = grid_points[inside_mask]
+                    _ = self.predict(valid_points.cpu().numpy())
+
+                    # Combine all recorded ReLU layer activations into one binary vector per input
+                    print([act.shape for act in activation_storage])
+                    activation_patterns = torch.cat(activation_storage, dim=1)  # shape: [num_points, total_relus]
+                    activation_storage.clear()  # Clean up
+
+                    # Convert each activation pattern to a unique ID
+                    pattern_ids = activation_patterns.numpy().dot(1 << np.arange(activation_patterns.shape[1]))
+                    unique_ids, remapped_ids = np.unique(pattern_ids, return_inverse=True)
+                    print("Number of region", len(unique_ids))
+                    remapped_ids += 1  # So it starts from 1 instead of 0
+                    
+                    num_base_colors = 40
+                    base_cmap = cm.get_cmap('tab20', num_base_colors)
+
+                    # Map activation region IDs using modulo
+                    modulo_color = remapped_ids % num_base_colors
+
+                    plt.figure(figsize=(8, 6))
+                    plt.scatter(valid_points[:, 0].cpu().numpy(), valid_points[:, 1].cpu().numpy(), c=modulo_color, cmap=base_cmap, s=0.2)
+                    plt.title('Linear Regions via ReLU Activation Patterns (Hook-Based)')
+                    plt.xlabel('x1')
+                    plt.ylabel('x2')
+                    plt.tight_layout()
+                    plt.axis("equal")
+                    plt.savefig(f"runs/{self.exp_name}/0-0/activation_pattern_{i}", dpi=300)
+                    plt.close()
+
+                    for h in relu_hooks:
+                        h.remove()
+                    relu_hooks.clear()
+                    
+                    del activation_patterns
+                    del activation_storage
+
+                    plt.clf()
+                    plt.close('all')
+
 
     def _train_tensorflow_compat_v1_scipy(self, display_every):
 
