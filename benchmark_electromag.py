@@ -25,7 +25,7 @@ from src.utils.args import parse_hidden_layers, parse_loss_weight
 from src.utils.callbacks import TesterCallback, PlotCallback, LossCallback
 from src.utils.rar import rar_wrapper
 
-pde_config = Burgers1D
+pde_config = Electric_Ritz
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='PINNBench trainer')
