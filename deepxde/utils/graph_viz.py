@@ -1,4 +1,7 @@
-from pygraphviz import AGraph
+try:
+    from pygraphviz import AGraph
+except ImportError:
+    AGraph = None
 
 
 def iter_graph(root, callback):
@@ -36,6 +39,8 @@ def register_hooks(var):
 
     def make_dot():
         # Use dictionary unpacking to define graph and node attributes
+        if AGraph is None:
+            raise ImportError("pygraphviz is not installed. Graph visualization is unavailable.")
         dot = AGraph(
             strict=False,
             directed=True,

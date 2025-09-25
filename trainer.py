@@ -75,11 +75,13 @@ class Trainer:
         import torch
         import deepxde as dde
 
-        if self.device[0] != 'cpu':
+        if self.device[0] != 'cpu' and torch.cuda.is_available():
+            print("Using GPU:", self.device)
             device = "cuda:" + self.device[0]
             torch.cuda.set_device(device)
             torch.set_default_tensor_type(torch.cuda.FloatTensor)
         else:
+            print("Using CPU")
             torch.set_default_tensor_type(torch.FloatTensor)
         dde.config.set_default_float('float32')
 

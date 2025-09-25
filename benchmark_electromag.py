@@ -5,14 +5,15 @@ from trainer import Trainer
 
 os.environ["DDEBACKEND"] = "pytorch"
 
-import numpy as np
+from scipy import interpolate
 import matplotlib.pyplot as plt
 from matplotlib import cm
 import matplotlib as mpl
 from skfem.visuals.matplotlib import draw
+
+import numpy as np
 import torch
 import deepxde as dde
-from scipy import interpolate
 from src.model.laaf import DNN_GAAF, DNN_LAAF
 from src.model.kan import KAN, build_splines_layers
 from src.model.kan_utils.utils import plot

@@ -5,9 +5,9 @@ pandas
 scikit-learn
 scikit-optimize
 scipy
-torch
 
 scikit-fem
 tqdm
-pygraphviz
 adaptmesh
+
+torch
