@@ -25,7 +25,6 @@ class InterfaceCallback(Callback):
         self.epoch += 1
         if self.register_ready():
             self.activation_storage.clear()
-            print(self.activation_storage)
 
     def on_epoch_end(self):
         """Called at the end of every epoch."""
@@ -46,8 +45,8 @@ class InterfaceCallback(Callback):
         if self.log_every is None:
             self.log_every = self.model.display_every
 
-        print("r")
         for module in self.model.net.modules():
+            print(module)
             self.relu_hooks.append(
                 module.register_forward_hook(self.get_relu_hook())
             )
