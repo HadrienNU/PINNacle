@@ -1,5 +1,7 @@
 from deepxde.callbacks import Callback
 
+import torch
+
 
 class InterfaceCallback(Callback):
 
@@ -8,29 +10,35 @@ class InterfaceCallback(Callback):
         self.log_every = log_every
         self.epoch = 0
         self.activation_storage = []
-        self.relu_hooks = []
 
     def register_ready(self):
         return self.epoch % self.log_every == 0
 
-    def get_relu_hook(self):
-        def hook(module, input, output):
+    def relu_output(self, output):
+        return (output > 0).int()
+
+    def get_activation_hook(self, activation_name):
+        activations_output = {
+            "tanh": self.relu_output, # Need to be changed
+            "relu": self.relu_output
+        }
+        activation_output = activations_output[activation_name.lower()]
+        def get_hook(module, input, output):
             if self.register_ready():
-                # Store binary ReLU activation pattern (1 = active, 0 = inactive)
-                self.activation_storage.append((output > 0).int().cpu())
-        return hook
+                self.activation_storage.append(activation_output(output).cpu())
+        return get_hook
+        
 
     def on_epoch_begin(self):
         """Called at the beginning of every epoch."""
-        self.epoch += 1
         if self.register_ready():
             self.activation_storage.clear()
 
     def on_epoch_end(self):
         """Called at the end of every epoch."""
+        self.epoch += 1
         if self.register_ready():           
             print(len(self.activation_storage))
-            print(self.activation_storage)
             print()
 
     def on_batch_begin(self):
@@ -45,11 +53,11 @@ class InterfaceCallback(Callback):
         if self.log_every is None:
             self.log_every = self.model.display_every
 
-        for module in self.model.net.modules():
-            print(module)
-            self.relu_hooks.append(
-                module.register_forward_hook(self.get_relu_hook())
-            )
+        activation_name = self.model.net.activation.__name__
+        get_hook = self.get_activation_hook(activation_name)
+        for module in self.model.net.modules():   
+            if isinstance(module, torch.nn.modules.linear.Linear):
+                module.register_forward_hook(get_hook)
 
     def on_train_end(self):
         """Called at the end of model training."""
