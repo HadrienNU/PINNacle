@@ -1,5 +1,5 @@
 from deepxde.callbacks import Callback
-
+import torch
 
 class InterfaceCallback(Callback):
 
@@ -11,7 +11,7 @@ class InterfaceCallback(Callback):
         self.relu_hooks = []
 
     def register_ready(self):
-        return self.epoch % self.log_every == 0
+        return (self.epoch + 1) % self.log_every == 0
 
     def get_relu_hook(self):
         def hook(module, input, output):
@@ -46,10 +46,11 @@ class InterfaceCallback(Callback):
             self.log_every = self.model.display_every
 
         for module in self.model.net.modules():
-            print(module)
-            self.relu_hooks.append(
-                module.register_forward_hook(self.get_relu_hook())
-            )
+            if isinstance(module, torch.nn.Linear):
+                print(module)
+                self.relu_hooks.append(
+                    module.register_forward_hook(self.get_relu_hook())
+                )
 
     def on_train_end(self):
         """Called at the end of model training."""
