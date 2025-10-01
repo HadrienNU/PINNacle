@@ -41,6 +41,7 @@ class InterfaceCallback(Callback):
         self.epoch += 1
         if self.register_ready():           
             print(len(self.activation_storage))
+            print(self.activation_storage)
             print()
 
     def on_batch_begin(self):
