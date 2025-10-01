@@ -1,5 +1,4 @@
 from deepxde.callbacks import Callback
-import torch
 
 import torch
 
