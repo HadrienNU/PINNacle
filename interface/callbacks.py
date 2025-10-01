@@ -1,4 +1,5 @@
 from deepxde.callbacks import Callback
+import torch
 
 import torch
 
@@ -22,6 +23,7 @@ class InterfaceCallback(Callback):
             "tanh": self.relu_output, # Need to be changed
             "relu": self.relu_output
         }
+
         activation_output = activations_output[activation_name.lower()]
         def get_hook(module, input, output):
             if self.register_ready():
