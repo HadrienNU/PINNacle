@@ -21,16 +21,25 @@ from src.utils.args import parse_hidden_layers, parse_loss_weight
 from src.utils.callbacks import TesterCallback, PlotCallback, LossCallback
 from src.utils.rar import rar_wrapper
 
+from src.pde.electromag import Magnetism_2D, Electric_2D, Magnetism_Ritz, Electric_Ritz
+
+
+from interface.callbacks import InterfaceCallback
+
 # It is recommended not to modify this example file.
 # Please copy it as benchmark_xxx.py and make changes according to your own ideas.
-pde_list = \
-    [Burgers1D, Burgers2D] + \
-    [Poisson2D_Classic, PoissonBoltzmann2D, Poisson3D_ComplexGeometry, Poisson2D_ManyArea] + \
-    [Heat2D_VaryingCoef, Heat2D_Multiscale, Heat2D_ComplexGeometry, Heat2D_LongTime] + \
-    [NS2D_LidDriven, NS2D_BackStep, NS2D_LongTime] + \
-    [Wave1D, Wave2D_Heterogeneous, Wave2D_LongTime] + \
-    [KuramotoSivashinskyEquation, GrayScottEquation] + \
-    [PoissonND, HeatND]
+# pde_list = \
+#     [Burgers1D, Burgers2D] + \
+#     [Poisson2D_Classic, PoissonBoltzmann2D, Poisson3D_ComplexGeometry, Poisson2D_ManyArea] + \
+#     [Heat2D_VaryingCoef, Heat2D_Multiscale, Heat2D_ComplexGeometry, Heat2D_LongTime] + \
+#     [NS2D_LidDriven, NS2D_BackStep, NS2D_LongTime] + \
+#     [Wave1D, Wave2D_Heterogeneous, Wave2D_LongTime] + \
+#     [KuramotoSivashinskyEquation, GrayScottEquation] + \
+#     [PoissonND, HeatND]
+
+pde_list = [
+    Electric_Ritz
+]
 
 # pde_list += \
 #     [(Burgers2D, {"datapath": "ref/burgers2d_1.dat", "icpath": ("ref/burgers2d_init_u_1.dat", "ref/burgers2d_init_v_1.dat")})] + \
@@ -82,8 +91,18 @@ if __name__ == "__main__":
     for pde_config in pde_list:
 
         def get_model_dde():
+            pde_forms = [Magnetism_2D, Electric_2D, Magnetism_Ritz, Electric_Ritz]
             if isinstance(pde_config, tuple):
                 pde = pde_config[0](**pde_config[1])
+            if any(isinstance(pde_config, pde_form) for pde_form in pde_forms):
+                if "disk" in command_args.name:
+                    pde = pde_config(form="disk")
+                elif "ellipse" in command_args.name:
+                    pde = pde_config(form="ellipse")
+                elif "polygon" in command_args.name:
+                    pde = pde_config(form="polygon")
+                else:
+                    pde = pde_config()
             else:
                 pde = pde_config()
             
@@ -91,11 +110,38 @@ if __name__ == "__main__":
             if command_args.method == "gepinn":
                 pde.use_gepinn()
 
+            architecture = "mlp"
             net = dde.nn.FNN([pde.input_dim] + parse_hidden_layers(command_args) + [pde.output_dim], "tanh", "Glorot normal")
             if command_args.method == "laaf":
                 net = DNN_LAAF(len(parse_hidden_layers(command_args)) - 1, parse_hidden_layers(command_args)[0], pde.input_dim, pde.output_dim)
             elif command_args.method == "gaaf":
                 net = DNN_GAAF(len(parse_hidden_layers(command_args)) - 1, parse_hidden_layers(command_args)[0], pde.input_dim, pde.output_dim)
+            elif command_args.method == "kan":
+                net = KAN(build_splines_layers(
+                    [pde.input_dim, 5, pde.output_dim], 
+                    grid_size=10, 
+                    grid_alpha=0.02, 
+                    scale_basis=0.1, 
+                    auto_grid_update=True, 
+                    stop_grid_update_iter=(command_args.iter * 0.6)))
+                architecture = "kan"
+            elif command_args.method == "deepritz":
+                net = dde.nn.FNN([pde.input_dim] + parse_hidden_layers(command_args) + [pde.output_dim], "relu", "Glorot normal")
+                architecture = "deepritz"
+            elif command_args.method == "kan-deepritz":
+                net = KAN(build_splines_layers(
+                    [pde.input_dim, 5, pde.output_dim], 
+                    grid_size=10, 
+                    grid_alpha=0.02, 
+                    scale_basis=0.1, 
+                    auto_grid_update=True, 
+                    stop_grid_update_iter=(command_args.iter * 0.6),
+                    spline_order=1,
+                    sb_trainable=False,
+                    scale_base=0,
+                    base_activation=torch.nn.ReLU
+                    ))
+                architecture = "kan-deepritz"
             net = net.float()
 
             loss_weights = parse_loss_weight(command_args)
@@ -113,19 +159,24 @@ if __name__ == "__main__":
                 opt = LR_Adaptor_NTK(opt, loss_weights, pde)
             elif command_args.method == "lbfgs":
                 opt = Adam_LBFGS(net.parameters(), switch_epoch=5000, adam_param={'lr':command_args.lr})
+            elif command_args.method == "kan":
+                opt = Adam_LBFGS(net.parameters(), switch_epoch=0, adam_param={'lr':command_args.lr}, lbfgs_param={
+                                                                                                                'lr':1, 
+                                                                                                                'history_size':15, 
+                                                                                                                'line_search_fn':"strong_wolfe", 
+                                                                                                                'tolerance_grad':1e-32, 
+                                                                                                                'tolerance_change':1e-32
+                                                                                                            })
 
-            model = pde.create_model(net)
-            model.compile(opt, loss_weights=loss_weights)
+            exp_name = f"{date_str}-{command_args.name}"
+            model = pde.create_model(net, architecture, exp_name)
+            if architecture == "deepritz" or architecture == "kan-deepritz":
+                model.compile(opt, loss_weights=loss_weights, loss="ritz")
+            else:
+                model.compile(opt, loss_weights=loss_weights)
             if command_args.method == "rar":
                 model.train = rar_wrapper(pde, model, {"interval": 1000, "count": 1})
-            # the trainer calls model.train(**train_args)
-            return model
-
-        def get_model_others():
-            model = None
-            # create a model object which support .train() method, and param @model_save_path is required
-            # create the object based on command_args and return it to be trained
-            # schedule the task using trainer.add_task(get_model_other, {training args})
+                
             return model
 
         trainer.add_task(
@@ -133,9 +184,10 @@ if __name__ == "__main__":
                 "iterations": command_args.iter,
                 "display_every": command_args.log_every,
                 "callbacks": [
-                    TesterCallback(log_every=command_args.log_every),
-                    PlotCallback(log_every=command_args.plot_every, fast=True),
-                    LossCallback(verbose=True),
+                    #TesterCallback(log_every=command_args.log_every),
+                    #PlotCallback(log_every=command_args.plot_every, fast=True),
+                    #LossCallback(verbose=True),
+                    InterfaceCallback(log_every=command_args.log_every),
                 ]
             }
         )
