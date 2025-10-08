@@ -31,17 +31,35 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(glm)
 
+# Find OpenGL
 find_package(OpenGL REQUIRED)
 
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
+  src/*.cpp
+  src/*.c
+)
+
 add_executable(pinn_interface
-  src/main.cpp
+  ${SOURCES}
+)
+
+target_include_directories(pinn_interface PRIVATE
+  include
 )
 
 target_link_libraries(pinn_interface PRIVATE
   glfw
-  OpenGL::GL
   glm::glm
 )
+
+# Link the proper OpenGL target depending on what's available
+if (TARGET OpenGL::GL)
+  target_link_libraries(pinn_interface PRIVATE OpenGL::GL)
+elseif (TARGET OpenGL::OpenGL)
+  target_link_libraries(pinn_interface PRIVATE OpenGL::OpenGL)
+else()
+  message(FATAL_ERROR "No suitable OpenGL target found from find_package(OpenGL)")
+endif()
 
 target_compile_definitions(pinn_interface PRIVATE
   GLFW_INCLUDE_NONE # prevent GLFW from including legacy GL headers if a loader is later added
@@ -53,4 +71,9 @@ if (MSVC)
   target_compile_options(pinn_interface PRIVATE /W4 /permissive-)
 else()
   target_compile_options(pinn_interface PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+# Silence OpenGL deprecation warnings on macOS
+if (APPLE)
+  target_compile_definitions(pinn_interface PRIVATE GL_SILENCE_DEPRECATION)
 endif()
