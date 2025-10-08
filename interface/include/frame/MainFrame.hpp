@@ -1,5 +1,7 @@
 #ifndef __MAIN_FRAME_HPP__
 #define __MAIN_FRAME_HPP__
+
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <util.hpp>
@@ -27,6 +29,7 @@ public:
     void run();
 private:
     void init();
+    void initImGUI();
     void runImGui();
     void runOpenGL();
 private:

@@ -13,7 +13,7 @@ GLFW and GLM are fetched automatically at configure time via CMake's FetchConten
 - Quick path using Makefile:
 
 ```
-make -C interface run
+make run
 ```
 
 - Or manually with CMake:
