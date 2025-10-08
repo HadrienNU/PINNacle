@@ -33,8 +33,18 @@ FetchContent_MakeAvailable(glm)
 
 find_package(OpenGL REQUIRED)
 
+# Récupérer tous les fichiers .cpp dans src/
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
+  src/*.cpp
+)
+
 add_executable(pinn_interface
-  src/main.cpp
+  ${SOURCES}
+)
+
+# Ajouter le dossier include/ aux chemins d'inclusion
+target_include_directories(pinn_interface PRIVATE
+  include
 )
 
 target_link_libraries(pinn_interface PRIVATE
