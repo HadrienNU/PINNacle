@@ -5,15 +5,22 @@ void error(const String & errorMessage) {
     throw std::runtime_error(errorMessage);
 }
 
-Color::Color(float red, float green, float blue) {
+Color::Color(unsigned char red, unsigned char green, unsigned char blue) {
     r = red;
     g = green;
     b = blue;
 }
 
 Color generateRandomColor() {
-    float red   = static_cast<float>(std::rand()) / RAND_MAX;
-    float green = static_cast<float>(std::rand()) / RAND_MAX;
-    float blue  = static_cast<float>(std::rand()) / RAND_MAX;
+    unsigned char red   = static_cast<unsigned char>(std::rand() % 256);
+    unsigned char green = static_cast<unsigned char>(std::rand() % 256);
+    unsigned char blue  = static_cast<unsigned char>(std::rand() % 256);
     return Color(red, green, blue);
+}
+
+GLColor::GLColor(const Color& color, GLfloat alpha = 1.0f) {
+    r = static_cast<GLfloat>(color.r) / 255.0f;
+    g = static_cast<GLfloat>(color.g) / 255.0f;
+    b = static_cast<GLfloat>(color.b) / 255.0f;
+    a = alpha;
 }
