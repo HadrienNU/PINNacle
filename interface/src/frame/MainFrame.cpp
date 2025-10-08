@@ -47,8 +47,9 @@ void MainFrame::init() {
         glfwTerminate();
         error("Failed to create GLFW window");        
     }
-
+    
     glfwMakeContextCurrent(_window);
+    gladLoadGL();
     glfwSwapInterval(1); // vsync
 
     int fbW, fbH;
@@ -56,14 +57,12 @@ void MainFrame::init() {
     glViewport(0, 0, fbW, fbH);
     glfwSetFramebufferSizeCallback(_window, framebuffer_size_callback);
 
-    gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
-
-    //IMGUI_CHECKVERSION();
-    //ImGui::CreateContext();
-    //ImGuiIO & io = ImGui::GetIO(); (void)io;
-    //ImGui::StyleColorsDark();
-    //ImGui_ImplGlfw_InitForOpenGL(_window, true);
-    //ImGui_ImplOpenGL3_Init("#version 330");
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO & io = ImGui::GetIO(); (void)io;
+    ImGui::StyleColorsDark();
+    ImGui_ImplGlfw_InitForOpenGL(_window, true);
+    ImGui_ImplOpenGL3_Init("#version 330");
 }
 
 void MainFrame::runImGui() {
@@ -75,8 +74,9 @@ void MainFrame::runImGui() {
     ImGui::Text("This is some useful text.");
     static float value = 0.0f;
     ImGui::SliderFloat("float", &value, 0.0f, 1.0f);
-    if (ImGui::Button("Close"))
+    if (ImGui::Button("Close")) {
         glfwSetWindowShouldClose(_window, GLFW_TRUE);
+    }
     ImGui::End();
 
     ImGui::Render();
@@ -84,7 +84,7 @@ void MainFrame::runImGui() {
 
 
 void MainFrame::runOpenGL() {
-    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+    glClearColor(_backgroundColor.r, _backgroundColor.g, _backgroundColor.b, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 }
 
@@ -92,10 +92,10 @@ void MainFrame::run() {
     while (!glfwWindowShouldClose(_window)) {
         glfwPollEvents();
 
-        //runImGui();
+        runImGui();
         runOpenGL();
 
-        //ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         
         glfwSwapBuffers(_window);
     }
