@@ -3,6 +3,7 @@
 
 
 #include <iostream>
+#include <GL/gl.h>
 
 
 struct Size {
@@ -11,8 +12,13 @@ struct Size {
 };
 
 struct Color {
-    float r, g, b;
-    Color(float red, float green, float blue);
+    unsigned char r, g, b;
+    Color(unsigned char red, unsigned char green, unsigned char blue);
+};
+
+struct GLColor {
+    GLfloat r, g, b, a;
+    GLColor(const Color& color, GLfloat alpha = 1.0f);
 };
 
 typedef std::string String;
