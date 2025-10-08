@@ -17,6 +17,9 @@ _title(title), _frameSize(frameSize) {
 }
 
 MainFrame::~MainFrame() {
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
     glfwDestroyWindow(_window);
     glfwTerminate();
 }
@@ -52,15 +55,48 @@ void MainFrame::init() {
     glfwGetFramebufferSize(_window, &fbW, &fbH);
     glViewport(0, 0, fbW, fbH);
     glfwSetFramebufferSizeCallback(_window, framebuffer_size_callback);
+
+    gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
+
+    //IMGUI_CHECKVERSION();
+    //ImGui::CreateContext();
+    //ImGuiIO & io = ImGui::GetIO(); (void)io;
+    //ImGui::StyleColorsDark();
+    //ImGui_ImplGlfw_InitForOpenGL(_window, true);
+    //ImGui_ImplOpenGL3_Init("#version 330");
+}
+
+void MainFrame::runImGui() {
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    ImGui::Begin("Test Window");
+    ImGui::Text("This is some useful text.");
+    static float value = 0.0f;
+    ImGui::SliderFloat("float", &value, 0.0f, 1.0f);
+    if (ImGui::Button("Close"))
+        glfwSetWindowShouldClose(_window, GLFW_TRUE);
+    ImGui::End();
+
+    ImGui::Render();
+}
+
+
+void MainFrame::runOpenGL() {
+    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
 }
 
 void MainFrame::run() {
     while (!glfwWindowShouldClose(_window)) {
         glfwPollEvents();
 
-        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
+        //runImGui();
+        runOpenGL();
 
+        //ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        
         glfwSwapBuffers(_window);
     }
 }

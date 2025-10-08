@@ -1,5 +1,9 @@
+#include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <util.hpp>
+#include <imgui/imgui.h>
+#include <imgui/backends/imgui_impl_glfw.h>
+#include <imgui/backends/imgui_impl_opengl3.h>
 
 #if defined(_WIN32)
 #  define NOMINMAX
@@ -21,8 +25,11 @@ public:
     void run();
 private:
     void init();
+    void runImGui();
+    void runOpenGL();
 private:
     String _title;
     Size _frameSize;
     GLFWwindow * _window;
 };
+
