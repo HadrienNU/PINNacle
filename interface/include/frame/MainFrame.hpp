@@ -1,3 +1,7 @@
+#ifndef __MAIN_FRAME_HPP__
+#define __MAIN_FRAME_HPP__
+
+
 #include <GLFW/glfw3.h>
 #include <util.hpp>
 
@@ -27,3 +31,5 @@ private:
     Color _backgroundColor;
     GLFWwindow * _window;
 };
+
+#endif

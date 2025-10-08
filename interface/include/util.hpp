@@ -1,3 +1,7 @@
+#ifndef __UTIL_HPP__
+#define __UTIL_HPP__
+
+
 #include <iostream>
 
 
@@ -16,4 +20,6 @@ typedef std::string String;
 void error(const String & errorMessage);
 
 Color generateRandomColor();
+
+#endif
 

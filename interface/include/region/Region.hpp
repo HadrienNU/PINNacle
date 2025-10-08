@@ -1,3 +1,7 @@
+#ifndef __REGION_HPP__
+#define __REGION_HPP__
+
+
 #include <glm/glm.hpp>
 #include <vector>
 
@@ -11,3 +15,5 @@ public:
 private:
     std::vector<glm::vec3> _points;
 };
+
+#endif
