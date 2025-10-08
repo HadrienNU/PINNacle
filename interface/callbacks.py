@@ -12,9 +12,16 @@ class InterfaceCallback(Callback):
         self.epoch = 0
         self.activation_storage = []
         self.map_region_count = {}
+        self.input_storage = []
 
     def register_ready(self):
         return self.epoch % self.log_every == 0
+
+    def get_input(self):
+        def get_hook(module, input):
+            if self.register_ready():
+                self.input_storage.append(input[0].cpu())
+        return get_hook
 
     def relu_output(self, output):
         return (output > 0).int()
@@ -37,6 +44,7 @@ class InterfaceCallback(Callback):
         if self.register_ready():
             self.activation_storage.clear()
             self.map_region_count.clear()
+            self.input_storage.clear()
 
     def on_epoch_end(self):
         """Called at the end of every epoch."""
@@ -52,6 +60,8 @@ class InterfaceCallback(Callback):
             print(len(self.activation_storage))
             print(self.activation_storage)
             print(f"Number of unique region : {len(self.map_region_count)}")
+            print(f"len input_storage: {len(self.input_storage)}")
+            print(f"Input shape : {self.input_storage[0].shape}")
 
     def on_batch_begin(self):
         """Called at the beginning of every batch."""
@@ -65,6 +75,8 @@ class InterfaceCallback(Callback):
         if self.log_every is None:
             self.log_every = self.model.display_every
 
+        self.model.net.register_forward_pre_hook(self.get_input())
+        
         activation_name = self.model.net.activation.__name__
         get_hook = self.get_activation_hook(activation_name)
         for module in self.model.net.modules():   
