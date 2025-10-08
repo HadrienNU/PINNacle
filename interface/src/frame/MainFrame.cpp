@@ -11,8 +11,8 @@ static void framebuffer_size_callback(GLFWwindow * window, int width, int height
 }
 
 
-MainFrame::MainFrame(const String & title, const Size & frameSize) : 
-_title(title), _frameSize(frameSize) {
+MainFrame::MainFrame(const String & title, const Size & frameSize, const Color & backgroundColor) : 
+_title(title), _frameSize(frameSize), _backgroundColor(backgroundColor) {
     init();
 }
 
@@ -58,7 +58,7 @@ void MainFrame::run() {
     while (!glfwWindowShouldClose(_window)) {
         glfwPollEvents();
 
-        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        glClearColor(_backgroundColor.r, _backgroundColor.g, _backgroundColor.b, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
         glfwSwapBuffers(_window);
