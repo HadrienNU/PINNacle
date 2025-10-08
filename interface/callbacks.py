@@ -10,13 +10,14 @@ class InterfaceCallback(Callback):
         self.log_every = log_every
         self.epoch = 0
         self.activation_storage = []
+        self.map_region_count = {}
 
     def register_ready(self):
         return self.epoch % self.log_every == 0
 
     def relu_output(self, output):
         return (output > 0).int()
-
+    
     def get_activation_hook(self, activation_name):
         activations_output = {
             "tanh": self.relu_output, # Need to be changed
@@ -34,14 +35,22 @@ class InterfaceCallback(Callback):
         """Called at the beginning of every epoch."""
         if self.register_ready():
             self.activation_storage.clear()
+            self.map_region_count.clear()
 
     def on_epoch_end(self):
         """Called at the end of every epoch."""
         self.epoch += 1
-        if self.register_ready():           
+        if self.register_ready():    
+            activation_pattern = torch.cat(self.activation_storage, dim=1) 
+            for point_activation in activation_pattern:
+                point_activation = tuple(point_activation.tolist())
+                if point_activation in self.map_region_count:
+                    self.map_region_count[point_activation]+=1
+                else:
+                    self.map_region_count[point_activation] = 1
             print(len(self.activation_storage))
             print(self.activation_storage)
-            print()
+            print(f"Number of unique region : {len(self.map_region_count)}")
 
     def on_batch_begin(self):
         """Called at the beginning of every batch."""
