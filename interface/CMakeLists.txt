@@ -31,6 +31,29 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(glm)
 
+# Optional: best-effort auto-install of system deps (currently Linux only)
+option(PINN_AUTOINSTALL_DEPS "Attempt to auto-install system OpenGL/X11 deps (Linux only)" OFF)
+if (PINN_AUTOINSTALL_DEPS AND UNIX AND NOT APPLE)
+  message(STATUS "PINN_AUTOINSTALL_DEPS=ON: attempting to detect distro and install dev packages (may prompt for sudo)")
+  # Try a few common package managers in order. This is best-effort and can be skipped if it fails.
+  execute_process(COMMAND bash -c "if command -v apt-get >/dev/null 2>&1; then echo apt; elif command -v dnf >/dev/null 2>&1; then echo dnf; elif command -v pacman >/dev/null 2>&1; then echo pacman; elif command -v zypper >/dev/null 2>&1; then echo zypper; else echo none; fi" OUTPUT_VARIABLE PKG_MGR OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if (PKG_MGR STREQUAL "apt")
+    execute_process(COMMAND bash -c "sudo apt-get update && sudo apt-get install -y libgl1-mesa-dev xorg-dev" RESULT_VARIABLE APT_RES)
+  elseif (PKG_MGR STREQUAL "dnf")
+    execute_process(COMMAND bash -c "sudo dnf install -y mesa-libGL-devel libX11-devel libXcursor-devel libXrandr-devel libXinerama-devel libXi-devel" RESULT_VARIABLE APT_RES)
+  elseif (PKG_MGR STREQUAL "pacman")
+    execute_process(COMMAND bash -c "sudo pacman -Syu --noconfirm && sudo pacman -S --noconfirm mesa libx11 libxcursor libxrandr libxinerama libxi" RESULT_VARIABLE APT_RES)
+  elseif (PKG_MGR STREQUAL "zypper")
+    execute_process(COMMAND bash -c "sudo zypper install -y Mesa-libGL-devel libX11-devel libXcursor-devel libXrandr-devel libXinerama-devel libXi-devel" RESULT_VARIABLE APT_RES)
+  else()
+    set(APT_RES 0)
+  endif()
+  if (NOT APT_RES EQUAL 0)
+    message(WARNING "Automatic dependency install failed (code=${APT_RES}). Please install OpenGL/X11 dev packages manually.")
+  endif()
+endif()
+
+# Find OpenGL
 find_package(OpenGL REQUIRED)
 
 add_executable(pinn_interface
@@ -39,9 +62,17 @@ add_executable(pinn_interface
 
 target_link_libraries(pinn_interface PRIVATE
   glfw
-  OpenGL::GL
   glm::glm
 )
+
+# Link the proper OpenGL target depending on what's available
+if (TARGET OpenGL::GL)
+  target_link_libraries(pinn_interface PRIVATE OpenGL::GL)
+elseif (TARGET OpenGL::OpenGL)
+  target_link_libraries(pinn_interface PRIVATE OpenGL::OpenGL)
+else()
+  message(FATAL_ERROR "No suitable OpenGL target found from find_package(OpenGL)")
+endif()
 
 target_compile_definitions(pinn_interface PRIVATE
   GLFW_INCLUDE_NONE # prevent GLFW from including legacy GL headers if a loader is later added
@@ -53,4 +84,9 @@ if (MSVC)
   target_compile_options(pinn_interface PRIVATE /W4 /permissive-)
 else()
   target_compile_options(pinn_interface PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+# Silence OpenGL deprecation warnings on macOS
+if (APPLE)
+  target_compile_definitions(pinn_interface PRIVATE GL_SILENCE_DEPRECATION)
 endif()

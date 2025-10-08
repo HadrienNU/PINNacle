@@ -3,6 +3,12 @@
 #  define NOMINMAX
 #  include <windows.h>
 #  include <GL/gl.h>
+#elif defined(__APPLE__)
+// Use modern OpenGL headers on macOS (legacy <GL/gl.h> isn't available)
+#  ifndef GL_SILENCE_DEPRECATION
+#    define GL_SILENCE_DEPRECATION
+#  endif
+#  include <OpenGL/gl3.h>
 #else
 #  include <GL/gl.h>
 #endif
