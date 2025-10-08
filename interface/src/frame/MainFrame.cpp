@@ -11,8 +11,8 @@ static void framebuffer_size_callback(GLFWwindow * window, int width, int height
 }
 
 
-MainFrame::MainFrame(const String & title, const Size & frameSize) : 
-_title(title), _frameSize(frameSize) {
+MainFrame::MainFrame(const String & title, const Size & frameSize, const Color & backgroundColor) : 
+_title(title), _frameSize(frameSize), _backgroundColor(backgroundColor) {
     init();
 }
 

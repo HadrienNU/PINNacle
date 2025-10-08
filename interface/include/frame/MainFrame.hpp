@@ -1,3 +1,5 @@
+#ifndef __MAIN_FRAME_HPP__
+#define __MAIN_FRAME_HPP__
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <util.hpp>
@@ -20,7 +22,7 @@
 
 class MainFrame {
 public:
-    MainFrame(const String & title, const Size & frameSize);
+    MainFrame(const String & title, const Size & frameSize, const Color & backgroundColor);
     ~MainFrame();    
     void run();
 private:
@@ -30,6 +32,8 @@ private:
 private:
     String _title;
     Size _frameSize;
+    Color _backgroundColor;
     GLFWwindow * _window;
 };
 
+#endif
