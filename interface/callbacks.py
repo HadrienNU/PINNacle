@@ -1,6 +1,7 @@
 from deepxde.callbacks import Callback
 
 import torch
+import csv
 
 
 class InterfaceCallback(Callback):
@@ -10,7 +11,6 @@ class InterfaceCallback(Callback):
         self.log_every = log_every
         self.epoch = 0
         self.activation_storage = []
-        self.map_region_count = {}
         self.input_storage = []
 
     def register_ready(self):
@@ -42,25 +42,26 @@ class InterfaceCallback(Callback):
         """Called at the beginning of every epoch."""
         if self.register_ready():
             self.activation_storage.clear()
-            self.map_region_count.clear()
             self.input_storage.clear()
 
     def on_epoch_end(self):
         """Called at the end of every epoch."""
         self.epoch += 1
-        if self.register_ready():    
-            activation_pattern = torch.cat(self.activation_storage, dim=1) 
-            for point_activation in activation_pattern:
-                point_activation = tuple(point_activation.tolist())
-                if point_activation in self.map_region_count:
-                    self.map_region_count[point_activation]+=1
-                else:
-                    self.map_region_count[point_activation] = 1
-            print(len(self.activation_storage))
-            print(self.activation_storage)
-            print(f"Number of unique region : {len(self.map_region_count)}")
-            print(f"len input_storage: {len(self.input_storage)}")
-            print(f"Input shape : {self.input_storage[0].shape}")
+        if not self.register_ready():   
+            return 
+        activation_pattern = torch.cat(self.activation_storage, dim=1) 
+        map_region = {}
+
+        for i in range(len(activation_pattern)):
+            point_activation = tuple(activation_pattern[i].tolist())
+            input_point = self.input_storage[0][i].tolist()
+            if point_activation in map_region:
+                map_region[point_activation].append(input_point)
+            else:
+                map_region[point_activation] = [input_point]
+
+        region_exporter = RegionExporter(map_region)
+        region_exporter.export(f"epoch{self.epoch}")
 
     def on_batch_begin(self):
         """Called at the beginning of every batch."""
@@ -93,3 +94,23 @@ class InterfaceCallback(Callback):
     def on_predict_end(self):
         """Called at the end of prediction."""
         pass
+
+
+class RegionExporter:
+    
+    def __init__(self, map_region):
+        self.map_region = map_region
+
+    def export(self, filename):
+        filename_csv = f"runs/{filename}.csv"
+        data = [['x', 'y', 'class']]
+        id_region = 0
+        for region in self.map_region:
+            for point in self.map_region[region]:
+                data.append([
+                    point[0], point[1], id_region
+                ])
+            id_region += 1
+        with open(filename_csv, mode='w', newline='', encoding='utf-8') as file:
+            writer = csv.writer(file)
+            writer.writerows(data)
