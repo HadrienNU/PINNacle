@@ -2,8 +2,21 @@
 #define __UTIL_HPP__
 
 
+#if defined(_WIN32)
+#  define NOMINMAX
+#  include <windows.h>
+#  include <GL/gl.h>
+#elif defined(__APPLE__)
+# ifndef GL_SILENCE_DEPRECATED
+#   define GL_SILENCE_DEPRECATED 
+#  endif
+#  include <OpenGL/gl3.h>
+#else
+#  include <GL/gl.h>
+#endif
+
+#include <vector>
 #include <iostream>
-#include <GL/gl.h>
 
 
 struct Size {
@@ -21,6 +34,7 @@ struct GLColor {
     GLColor(const Color& color, GLfloat alpha = 1.0f);
 };
 
+typedef std::vector<Color> TableColor;
 typedef std::string String;
 
 void error(const String & errorMessage);
