@@ -8,11 +8,13 @@
 #include <imgui/backends/imgui_impl_glfw.h>
 #include <imgui/backends/imgui_impl_opengl3.h>
 #include <opengl/Shader.hpp>
+#include <opengl/VAO.hpp>
+#include <region/Region.hpp>
 
 
 class MainFrame {
 public:
-    MainFrame(const String & title, const Size & frameSize, const Color & backgroundColor);
+    MainFrame(const String & title, const Size & frameSize, const Color & backgroundColor, Regions regions);
     ~MainFrame();    
     void run();
 private:
@@ -26,6 +28,10 @@ private:
     Color _backgroundColor;
     GLFWwindow * _window;
     Shader * _shader;
+    VAO * _vaos;
+
+    Regions _regions;
+    TableColor _tableColor;
 };
 
 #endif

@@ -10,6 +10,7 @@ public:
     ~Shader();
     void bind();
     void unbind();
+    void setUniformVector(const String & uniform, const glm::vec3 & vector);
 private:
     void checkShader(GLuint shader, const String & type);
 private:

@@ -12,6 +12,7 @@ public:
     void addPoint(const glm::vec2 & point);
     void addPoint(const glm::vec3 & point);
     glm::vec3 getCenter() const;
+    std::vector<glm::vec3> createMesh();
 private:
     std::vector<glm::vec3> _points;
 };

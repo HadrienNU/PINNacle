@@ -4,12 +4,13 @@
 
 
 int main() {
-    std::srand(static_cast<unsigned int>(std::time(nullptr)));
-    MainFrame mainFrame("PINNacle Interface", {800, 800}, Color(30, 30, 30));
+    std::srand(static_cast<unsigned int>(std::time(nullptr)));    
     
     RegionReader regionReader;
     regionReader.setRegionFilePath("../runs/epoch100.csv");
     Regions regions = regionReader.read();
+
+    MainFrame mainFrame("PINNacle Interface", {800, 800}, Color(30, 30, 30), regions);
     
     mainFrame.run();
     return EXIT_SUCCESS;

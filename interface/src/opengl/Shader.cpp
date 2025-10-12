@@ -13,10 +13,10 @@ void main() {
 const char * fragmentShaderSource = R"glsl(
 #version 330 core
 out vec4 fragColor;
-uniform vec4 color;
+uniform vec3 color;
 
 void main() {
-    fragColor = color;
+    fragColor = vec4(color, 1);
 }
 )glsl";
 
@@ -52,6 +52,11 @@ void Shader::bind() {
 
 void Shader::unbind() {
     glUseProgram(0);
+}
+
+void Shader::setUniformVector(const String & uniform, const glm::vec3 & vector) {
+    GLint offsetLoc = glGetUniformLocation(_program, uniform.c_str());
+    glUniform3f(offsetLoc, vector.x, vector.y, vector.z);
 }
 
 void Shader::checkShader(GLuint shader, const String & type) {

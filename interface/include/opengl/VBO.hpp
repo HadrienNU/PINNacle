@@ -10,6 +10,7 @@ public:
     ~VBO();
     void bind();
     void unbind();
+    void setData(size_t size, const void * data);
 private:
     GLuint _vbo;
 };
