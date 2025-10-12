@@ -1,0 +1,50 @@
+#include <region/RegionReader.hpp>
+
+RegionReader::RegionReader() {
+    _regionFilePath = "";
+}
+
+void RegionReader::setRegionFilePath(const String & regionFilePath) {
+    _regionFilePath = regionFilePath;
+}
+
+Regions RegionReader::read() const {
+    Regions regions;
+    if (_regionFilePath.empty()) {
+        return regions;
+    }
+    std::ifstream regionFile(_regionFilePath);
+    if (!regionFile.is_open()) {
+        return regions;
+    }
+
+    String line;
+    Region currentRegion;
+    int currentIdRegion = 0;
+    bool header = true;
+    while (std::getline(regionFile, line)) {
+        if (header) {
+            header = false;
+            continue;
+        }
+        std::stringstream ss(line);
+        String x, y, idRegion;
+
+        std::getline(ss, x, ',');
+        std::getline(ss, y, ',');
+        std::getline(ss, idRegion, ',');
+
+        glm::vec2 point(std::stof(x), std::stof(y));
+        std::cout << "x=" << point.x << ", y=" << point.y << ", id=" << std::stoi(idRegion) << std::endl;
+        currentRegion.addPoint(point);
+        if (std::stoi(idRegion) != currentIdRegion) {
+            currentIdRegion = std::stoi(idRegion);
+            std::cout << "Changement de region\n";
+            regions.push_back(currentRegion);
+            currentRegion = Region();
+        }
+    }
+
+    regionFile.close();
+    return regions;
+}

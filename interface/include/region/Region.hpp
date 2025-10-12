@@ -16,4 +16,6 @@ private:
     std::vector<glm::vec3> _points;
 };
 
+typedef std::vector<Region> Regions;
+
 #endif
