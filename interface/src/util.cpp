@@ -24,3 +24,12 @@ GLColor::GLColor(const Color& color, GLfloat alpha) {
     b = static_cast<GLfloat>(color.b) / 255.0f;
     a = alpha;
 }
+
+TableColor generateTableColor(size_t tableColorSize) {
+    TableColor tableColor;
+    for (size_t i = 0; i < tableColorSize; i++) {
+        Color randomColor = generateRandomColor();
+        tableColor.push_back(randomColor);
+    }
+    return tableColor;
+}

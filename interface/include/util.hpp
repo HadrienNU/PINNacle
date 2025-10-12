@@ -41,5 +41,7 @@ void error(const String & errorMessage);
 
 Color generateRandomColor();
 
+TableColor generateTableColor(size_t tableColorSize);
+
 #endif
 
