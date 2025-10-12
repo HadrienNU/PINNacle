@@ -35,11 +35,11 @@ Regions RegionReader::read() const {
         std::getline(ss, idRegion, ',');
 
         glm::vec2 point(std::stof(x), std::stof(y));
-        std::cout << "x=" << point.x << ", y=" << point.y << ", id=" << std::stoi(idRegion) << std::endl;
         currentRegion.addPoint(point);
+
+        /* Changing region */
         if (std::stoi(idRegion) != currentIdRegion) {
             currentIdRegion = std::stoi(idRegion);
-            std::cout << "Changement de region\n";
             regions.push_back(currentRegion);
             currentRegion = Region();
         }

@@ -2,12 +2,12 @@
 #define __MAIN_FRAME_HPP__
 
 
-#include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <util.hpp>
 #include <imgui/imgui.h>
 #include <imgui/backends/imgui_impl_glfw.h>
 #include <imgui/backends/imgui_impl_opengl3.h>
+#include <opengl/Shader.hpp>
 
 
 class MainFrame {
@@ -25,6 +25,7 @@ private:
     Size _frameSize;
     Color _backgroundColor;
     GLFWwindow * _window;
+    Shader * _shader;
 };
 
 #endif

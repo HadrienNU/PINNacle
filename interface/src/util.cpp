@@ -18,7 +18,7 @@ Color generateRandomColor() {
     return Color(red, green, blue);
 }
 
-GLColor::GLColor(const Color& color, GLfloat alpha) {
+ColorGL::ColorGL(const Color& color, GLfloat alpha) {
     r = static_cast<GLfloat>(color.r) / 255.0f;
     g = static_cast<GLfloat>(color.g) / 255.0f;
     b = static_cast<GLfloat>(color.b) / 255.0f;

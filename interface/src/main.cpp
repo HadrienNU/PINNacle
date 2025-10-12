@@ -5,7 +5,7 @@
 
 int main() {
     std::srand(static_cast<unsigned int>(std::time(nullptr)));
-    MainFrame mainFrame("PINNacle Interface", {800, 800}, generateRandomColor());
+    MainFrame mainFrame("PINNacle Interface", {800, 800}, Color(30, 30, 30));
     
     RegionReader regionReader;
     regionReader.setRegionFilePath("../runs/epoch100.csv");

@@ -21,6 +21,7 @@ MainFrame::~MainFrame() {
     ImGui::DestroyContext();
     glfwDestroyWindow(_window);
     glfwTerminate();
+    delete _shader;
 }
 
 void MainFrame::init() {
@@ -55,7 +56,9 @@ void MainFrame::init() {
     glfwGetFramebufferSize(_window, &fbW, &fbH);
     glViewport(0, 0, fbW, fbH);
     glfwSetFramebufferSizeCallback(_window, framebuffer_size_callback);
-    initImGUI();    
+    initImGUI();  
+    
+    _shader = new Shader();
 }
 
 void MainFrame::initImGUI() {
@@ -85,8 +88,10 @@ void MainFrame::runImGui() {
 }
 
 void MainFrame::runOpenGL() {
-    glClearColor(_backgroundColor.r, _backgroundColor.g, _backgroundColor.b, 1.0f);
+    ColorGL colorGL = ColorGL(_backgroundColor);
+    glClearColor(colorGL.r, colorGL.g, colorGL.b, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
+    _shader -> bind();
 }
 
 void MainFrame::run() {
