@@ -12,6 +12,8 @@ class InterfaceCallback(Callback):
         self.epoch = 0
         self.activation_storage = []
         self.input_storage = []
+        self.map_regions_id = {}
+        self.nb_regions = 0
 
     def register_ready(self):
         return self.epoch % self.log_every == 0
@@ -53,12 +55,16 @@ class InterfaceCallback(Callback):
         map_region = {}
 
         for i in range(len(activation_pattern)):
-            point_activation = tuple(activation_pattern[i].tolist())
             input_point = self.input_storage[0][i].tolist()
-            if point_activation in map_region:
-                map_region[point_activation].append(input_point)
-            else:
-                map_region[point_activation] = [input_point]
+            region = tuple(activation_pattern[i].tolist())
+            if region not in self.map_regions_id:
+                self.map_regions_id[region] = self.nb_regions
+                self.nb_regions += 1
+            id_region = self.map_regions_id[region]
+            if id_region in map_region:                
+                map_region[id_region].append(input_point)
+            else:                
+                map_region[id_region] = [input_point]                
 
         region_exporter = RegionExporter(map_region)
         region_exporter.export(f"epoch{self.epoch}")
@@ -104,13 +110,11 @@ class RegionExporter:
     def export(self, filename):
         filename_csv = f"runs/{filename}.csv"
         data = [['x', 'y', 'class']]
-        id_region = 0
         for region in self.map_region:
             for point in self.map_region[region]:
                 data.append([
-                    point[0], point[1], id_region
+                    point[0], point[1], region
                 ])
-            id_region += 1
         with open(filename_csv, mode='w', newline='', encoding='utf-8') as file:
             writer = csv.writer(file)
             writer.writerows(data)
