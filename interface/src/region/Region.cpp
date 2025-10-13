@@ -19,3 +19,18 @@ glm::vec3 Region::getCenter() const {
     return center;
 }
 
+std::vector<glm::vec3> Region::createMesh() {
+    std::vector<glm::vec3> vertices;
+    glm::vec3 centerRegion = getCenter();
+    float epsilon = 1e-2;
+    
+    vertices.push_back(centerRegion + glm::vec3(-epsilon, epsilon, 0.0f));
+    vertices.push_back(centerRegion + glm::vec3(epsilon, epsilon, 0.0f));
+    vertices.push_back(centerRegion + glm::vec3(epsilon, -epsilon, 0.0f));
+    
+    vertices.push_back(centerRegion + glm::vec3(-epsilon, epsilon, 0.0f));    
+    vertices.push_back(centerRegion + glm::vec3(epsilon, -epsilon, 0.0f));
+    vertices.push_back(centerRegion + glm::vec3(-epsilon, -epsilon, 0.0f));
+    return vertices;
+}
+
