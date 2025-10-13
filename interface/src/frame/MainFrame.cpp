@@ -32,9 +32,8 @@ void MainFrame::init() {
         error("Failed to initialize GLFW");
     }
 
-    // Request an OpenGL 4.4 Core profile context
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 #if __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
@@ -74,7 +73,7 @@ void MainFrame::initImGUI() {
     ImGuiIO & io = ImGui::GetIO(); (void)io;
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(_window, true);
-    ImGui_ImplOpenGL3_Init("#version 440");
+    ImGui_ImplOpenGL3_Init("#version 330");
 }
 
 void MainFrame::runImGui() {
