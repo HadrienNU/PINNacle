@@ -10,8 +10,8 @@ static void framebuffer_size_callback(GLFWwindow * window, int width, int height
     glViewport(0, 0, width, height);
 }
 
-MainFrame::MainFrame(const String & title, const Size & frameSize, const Color & backgroundColor, Regions regions) : 
-_title(title), _frameSize(frameSize), _backgroundColor(backgroundColor), _regions(regions) {
+MainFrame::MainFrame(const String & title, const Size & frameSize, const Color & backgroundColor, Regions regions, ImGuiFrames imguiFrames) : 
+_title(title), _frameSize(frameSize), _backgroundColor(backgroundColor), _regions(regions), _imguiFrames(imguiFrames) {
     init();
 }
 
@@ -76,23 +76,6 @@ void MainFrame::initImGUI() {
     ImGui_ImplOpenGL3_Init("#version 330");
 }
 
-void MainFrame::runImGui() {
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
-
-    ImGui::Begin("Test Window");
-    ImGui::Text("This is some useful text.");
-    static float value = 0.0f;
-    ImGui::SliderFloat("float", &value, 0.0f, 1.0f);
-    if (ImGui::Button("Close")) {
-        glfwSetWindowShouldClose(_window, GLFW_TRUE);
-    }
-    ImGui::End();
-
-    ImGui::Render();
-}
-
 void MainFrame::runOpenGL() {
     ColorGL colorGL = ColorGL(_backgroundColor);
     glClearColor(colorGL.r, colorGL.g, colorGL.b, 1.0f);
@@ -111,7 +94,7 @@ void MainFrame::run() {
     while (!glfwWindowShouldClose(_window)) {
         glfwPollEvents();
 
-        runImGui();
+        _imguiFrames.render();
         runOpenGL();
 
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

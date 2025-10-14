@@ -10,7 +10,9 @@ int main() {
     regionReader.setRegionFilePath("../runs/epoch100.csv");
     Regions regions = regionReader.read();
 
-    MainFrame mainFrame("PINNacle Interface", {800, 800}, Color(30, 30, 30), regions);
+    ImGuiFrames imguiFrames;
+
+    MainFrame mainFrame("PINNacle Interface", {800, 800}, Color(30, 30, 30), regions, imguiFrames);
     
     mainFrame.run();
     return EXIT_SUCCESS;

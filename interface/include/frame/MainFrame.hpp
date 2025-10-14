@@ -10,17 +10,23 @@
 #include <opengl/Shader.hpp>
 #include <opengl/VAO.hpp>
 #include <region/Region.hpp>
+#include <frame/ImGuiFrames.hpp>
 
 
 class MainFrame {
 public:
-    MainFrame(const String & title, const Size & frameSize, const Color & backgroundColor, Regions regions);
+    MainFrame(
+        const String & title, 
+        const Size & frameSize, 
+        const Color & backgroundColor, 
+        Regions regions,
+        ImGuiFrames imguiFrames
+    );
     ~MainFrame();    
     void run();
 private:
     void init();
     void initImGUI();
-    void runImGui();
     void runOpenGL();
 private:
     String _title;
@@ -32,6 +38,8 @@ private:
 
     Regions _regions;
     TableColor _tableColor;
+    
+    ImGuiFrames _imguiFrames;
 };
 
 #endif
