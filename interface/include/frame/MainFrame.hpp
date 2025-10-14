@@ -16,7 +16,7 @@ public:
     MainFrame(
         const String & title, 
         const Size & frameSize,
-        FrameGL & frameGL,
+        FrameGL * frameGL,
         ImGuiFrames & imguiFrames
     );
     ~MainFrame();    
@@ -29,7 +29,7 @@ private:
     String _title;
     Size _frameSize;
     GLFWwindow * _window;
-    std::shared_ptr<FrameGL> _frameGL;
+    FrameGL * _frameGL;
     ImGuiFrames _imguiFrames;
 };
 
