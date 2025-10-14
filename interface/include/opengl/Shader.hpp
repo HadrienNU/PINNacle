@@ -6,7 +6,10 @@
 
 class Shader {
 public:
-    Shader();
+    Shader(
+        const char * vertexShaderSource,
+        const char * fragmentShaderSource
+    );
     ~Shader();
     void bind();
     void unbind();

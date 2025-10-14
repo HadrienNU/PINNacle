@@ -1,27 +1,10 @@
 #include <opengl/Shader.hpp>
 
 
-const char * vertexShaderSource = R"glsl(
-#version 330 core
-layout (location = 0) in vec3 aPos;
-
-void main() {
-    gl_Position = vec4(aPos, 1.0);
-}
-)glsl"; 
-
-const char * fragmentShaderSource = R"glsl(
-#version 330 core
-out vec4 fragColor;
-uniform vec3 color;
-
-void main() {
-    fragColor = vec4(color, 1);
-}
-)glsl";
-
-
-Shader::Shader() {
+Shader::Shader(
+    const char * vertexShaderSource,
+    const char * fragmentShaderSource
+) {
     _program = glCreateProgram();
 
     GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);

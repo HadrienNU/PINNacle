@@ -10,14 +10,12 @@ static void framebuffer_size_callback(GLFWwindow * window, int width, int height
     glViewport(0, 0, width, height);
 }
 
-MainFrame::MainFrame(const String & title, const Size & frameSize, const Color & backgroundColor, Regions regions) : 
-_title(title), _frameSize(frameSize), _backgroundColor(backgroundColor), _regions(regions) {
+MainFrame::MainFrame(const String & title, const Size & frameSize, FrameGL & frameGL) : 
+_title(title), _frameSize(frameSize), _frameGL(&frameGL) {
     init();
 }
 
 MainFrame::~MainFrame() {
-    delete _shader;
-    delete[] _vaos;
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
@@ -57,14 +55,7 @@ void MainFrame::init() {
     glViewport(0, 0, fbW, fbH);
     glfwSetFramebufferSizeCallback(_window, framebuffer_size_callback);
     initImGUI();  
-    
-    _shader = new Shader();
-    _vaos = new VAO[_regions.size()];
-    _tableColor = generateTableColor(_regions.size());
-
-    for (size_t i = 0; i < _regions.size(); i ++) {
-        _vaos[i].setVector(0, _regions[i].createMesh());
-    }
+    _frameGL -> init();
 }
 
 void MainFrame::initImGUI() {
@@ -93,27 +84,12 @@ void MainFrame::runImGui() {
     ImGui::Render();
 }
 
-void MainFrame::runOpenGL() {
-    ColorGL colorGL = ColorGL(_backgroundColor);
-    glClearColor(colorGL.r, colorGL.g, colorGL.b, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
-    _shader -> bind();
-    for (size_t i = 0; i < _regions.size(); i ++) {
-        ColorGL colorGL = ColorGL(_tableColor[i]);
-        glm::vec3 color(colorGL.r, colorGL.g, colorGL.b);
-        _shader -> setUniformVector("color", color);
-        _vaos[i].bind();
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-    }        
-}
-
 void MainFrame::run() {
     while (!glfwWindowShouldClose(_window)) {
         glfwPollEvents();
 
         runImGui();
-        runOpenGL();
-
+        _frameGL -> render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         
         glfwSwapBuffers(_window);
