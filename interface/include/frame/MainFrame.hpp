@@ -18,6 +18,7 @@ public:
         FrameGL & frameGL
     );
     ~MainFrame();    
+    void resize(const Size & frameSize);
     void run();
 private:
     void init();

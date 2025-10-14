@@ -6,8 +6,11 @@ static void error_callback(int error, const char * description) {
 }
 
 static void framebuffer_size_callback(GLFWwindow * window, int width, int height) {
-    (void) window;
-    glViewport(0, 0, width, height);
+    MainFrame * frame = static_cast<MainFrame*>(glfwGetWindowUserPointer(window));
+    if (!frame) {
+        return;
+    }
+    frame -> resize({width, height});
 }
 
 MainFrame::MainFrame(const String & title, const Size & frameSize, FrameGL & frameGL) : 
@@ -21,6 +24,12 @@ MainFrame::~MainFrame() {
     ImGui::DestroyContext();
     glfwDestroyWindow(_window);
     glfwTerminate();    
+}
+
+void MainFrame::resize(const Size & frameSize) {
+    _frameSize = frameSize;
+    _frameGL -> resize(_frameSize);
+    glViewport(0, 0, frameSize.width, frameSize.height);
 }
 
 void MainFrame::init() {
@@ -51,11 +60,12 @@ void MainFrame::init() {
     glfwSwapInterval(1); // vsync
 
     int fbW, fbH;
+    glfwSetWindowUserPointer(_window, this);
     glfwGetFramebufferSize(_window, &fbW, &fbH);
     glViewport(0, 0, fbW, fbH);
     glfwSetFramebufferSizeCallback(_window, framebuffer_size_callback);
     initImGUI();  
-    _frameGL -> init();
+    _frameGL -> init(_frameSize);
 }
 
 void MainFrame::initImGUI() {
