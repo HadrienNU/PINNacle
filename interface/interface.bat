@@ -1,6 +1,6 @@
 @echo off
 REM Usage:
-REM   interface\build_run.bat [configure|build|run|launch|clean|rebuild]
+REM   interface\interface.bat [configure|build|run|launch|clean|rebuild]
 
 setlocal EnableDelayedExpansion
 cd /d "%~dp0"
@@ -63,7 +63,7 @@ goto :eof
 
 :usage
 echo Unknown command: %CMD%
-echo Usage: build_run.bat [configure^|build^|run^|launch^|clean^|rebuild]
+echo Usage: interface.bat [configure^|build^|run^|launch^|clean^|rebuild]
 exit /b 1
 
 :cmErr

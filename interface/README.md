@@ -24,20 +24,20 @@ Notes:
 ## Quick start (recommended)
 
 - Linux/macOS:
-	- Build + run: `./interface/build_run.sh run`
-	- Launch (run without building): `./interface/build_run.sh launch`
-	- Build only: `./interface/build_run.sh build`
-	- Configure only: `./interface/build_run.sh configure`
-	- Rebuild (clean + build): `./interface/build_run.sh rebuild`
-	- Clean: `./interface/build_run.sh clean`
+	- Build + run: `./interface/interface.sh run`
+	- Launch (run without building): `./interface/interface.sh launch`
+	- Build only: `./interface/interface.sh build`
+	- Configure only: `./interface/interface.sh configure`
+	- Rebuild (clean + build): `./interface/interface.sh rebuild`
+	- Clean: `./interface/interface.sh clean`
 
 - Windows (PowerShell or cmd):
-	- Build + run: `interface\build_run.bat run`
-	- Launch (run without building): `interface\build_run.bat launch`
-	- Build only: `interface\build_run.bat build`
-	- Configure only: `interface\build_run.bat configure`
-	- Rebuild (clean + build): `interface\build_run.bat rebuild`
-	- Clean: `interface\build_run.bat clean`
+	- Build + run: `interface\interface.bat run`
+	- Launch (run without building): `interface\interface.bat launch`
+	- Build only: `interface\interface.bat build`
+	- Configure only: `interface\interface.bat configure`
+	- Rebuild (clean + build): `interface\interface.bat rebuild`
+	- Clean: `interface\interface.bat clean`
 
 Notes:
 - The scripts rely on CMake's default generator by default. To force a specific generator/architecture without using manual commands, set an environment variable before running the script, for example:

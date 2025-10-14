@@ -63,13 +63,13 @@ The viewer source lives in `interface/`. Prefer the provided scripts:
 - Linux/macOS:
 
 ```bash
-./interface/build_run.sh run
+./interface/interface.sh run
 ```
 
 - Windows:
 
 ```bat
-interface\build_run.bat run
+interface\interface.bat run
 ```
 
 This will configure CMake, build the project, and run the executable (`pinn_interface`).

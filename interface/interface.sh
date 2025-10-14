@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Usage:
-#   ./interface/build_run.sh [configure|build|run|launch|clean|rebuild]
+#   ./interface/interface.sh [configure|build|run|launch|clean|rebuild]
 # Default is 'build'.
 
 set -euo pipefail
