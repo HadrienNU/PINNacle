@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Usage:
-#   ./interface/build_run.sh [configure|build|run|clean|rebuild]
+#   ./interface/build_run.sh [configure|build|run|launch|clean|rebuild]
 # Default is 'build'.
 
 set -euo pipefail
@@ -25,13 +25,17 @@ build() {
   cmake --build "$BUILD_DIR" --config "$CONFIG" -j
 }
 
-run_app() {
+launch_app() {
   local exe="./$BUILD_DIR/pinn_interface"
-  # If a multi-config generator was used (e.g., Xcode or Ninja Multi-Config), prefer the config subfolder
   if [ -f "./$BUILD_DIR/$CONFIG/pinn_interface" ]; then
     exe="./$BUILD_DIR/$CONFIG/pinn_interface"
   fi
-  echo "[run] ${exe}"
+  if [ ! -x "$exe" ]; then
+    echo "[launch] Executable not found: $exe"
+    echo "[launch] Calling 'run' to build and launch..."
+    exec "$0" run
+  fi
+  echo "[launch] ${exe}"
   "${exe}"
 }
 
@@ -43,8 +47,9 @@ clean() {
 case "$cmd" in
   configure) configure ;;
   build)     build ;;
-  run)       build; run_app ;;
+  run)       build; launch_app ;;
+  launch)    launch_app ;;
   rebuild)   clean; build ;;
   clean)     clean ;;
-  *) echo "Unknown command: $cmd"; echo "Usage: $0 [configure|build|run|clean|rebuild]"; exit 1;;
+  *) echo "Unknown command: $cmd"; echo "Usage: $0 [configure|build|run|launch|clean|rebuild]"; exit 1;;
 esac

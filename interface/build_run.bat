@@ -1,6 +1,6 @@
 @echo off
 REM Usage:
-REM   interface\build_run.bat [configure|build|run|clean|rebuild]
+REM   interface\build_run.bat [configure|build|run|launch|clean|rebuild]
 
 setlocal EnableDelayedExpansion
 cd /d "%~dp0"
@@ -13,6 +13,7 @@ if "%CMD%"=="" set "CMD=build"
 if /I "%CMD%"=="configure" goto :configure
 if /I "%CMD%"=="build" goto :build
 if /I "%CMD%"=="run" goto :run
+if /I "%CMD%"=="launch" goto :launch
 if /I "%CMD%"=="rebuild" goto :rebuild
 if /I "%CMD%"=="clean" goto :clean
 goto :usage
@@ -34,9 +35,19 @@ goto :eof
 
 :run
 call "%~f0" build || goto :cmErr
+call "%~f0" launch
+goto :eof
+
+:launch
 set "EXE=%BUILD_DIR%\pinn_interface.exe"
 if exist "%BUILD_DIR%\%CONFIG%\pinn_interface.exe" set "EXE=%BUILD_DIR%\%CONFIG%\pinn_interface.exe"
-echo [run] %EXE%
+if not exist "%EXE%" (
+	echo [launch] Executable not found: %EXE%
+	echo [launch] Calling 'run' to build and launch...
+	call "%~f0" run
+	goto :eof
+)
+echo [launch] %EXE%
 %EXE%
 goto :eof
 
@@ -52,7 +63,7 @@ goto :eof
 
 :usage
 echo Unknown command: %CMD%
-echo Usage: build_run.bat [configure^|build^|run^|clean^|rebuild]
+echo Usage: build_run.bat [configure^|build^|run^|launch^|clean^|rebuild]
 exit /b 1
 
 :cmErr
