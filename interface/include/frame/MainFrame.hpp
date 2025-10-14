@@ -16,8 +16,8 @@ public:
     MainFrame(
         const String & title, 
         const Size & frameSize,
-        FrameGL & frameGL
-        ImGuiFrames imguiFrames
+        FrameGL & frameGL,
+        ImGuiFrames & imguiFrames
     );
     ~MainFrame();    
     void resize(const Size & frameSize);

@@ -14,7 +14,7 @@ int main() {
     ImGuiFrames imguiFrames;
 
     MainFrame mainFrame("PINNacle Interface", {800, 800}, frameGL, imguiFrames);
-    frameGL.setRegions(regions, imguiFrames);
+    frameGL.setRegions(regions);
     
     mainFrame.run();
     return EXIT_SUCCESS;
