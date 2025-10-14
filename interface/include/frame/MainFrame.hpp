@@ -7,9 +7,7 @@
 #include <imgui/imgui.h>
 #include <imgui/backends/imgui_impl_glfw.h>
 #include <imgui/backends/imgui_impl_opengl3.h>
-#include <opengl/Shader.hpp>
-#include <opengl/VAO.hpp>
-#include <region/Region.hpp>
+#include <frame/FrameGL.hpp>
 #include <frame/ImGuiFrames.hpp>
 
 
@@ -17,28 +15,21 @@ class MainFrame {
 public:
     MainFrame(
         const String & title, 
-        const Size & frameSize, 
-        const Color & backgroundColor, 
-        Regions regions,
+        const Size & frameSize,
+        FrameGL & frameGL
         ImGuiFrames imguiFrames
     );
     ~MainFrame();    
+    void resize(const Size & frameSize);
     void run();
 private:
     void init();
     void initImGUI();
-    void runOpenGL();
 private:
     String _title;
     Size _frameSize;
-    Color _backgroundColor;
     GLFWwindow * _window;
-    Shader * _shader;
-    VAO * _vaos;
-
-    Regions _regions;
-    TableColor _tableColor;
-    
+    std::shared_ptr<FrameGL> _frameGL;
     ImGuiFrames _imguiFrames;
 };
 

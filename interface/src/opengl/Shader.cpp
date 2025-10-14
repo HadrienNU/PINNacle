@@ -1,38 +1,21 @@
 #include <opengl/Shader.hpp>
 
 
-const char * vertexShaderSource = R"glsl(
-#version 330 core
-layout (location = 0) in vec3 aPos;
-
-void main() {
-    gl_Position = vec4(aPos, 1.0);
-}
-)glsl"; 
-
-const char * fragmentShaderSource = R"glsl(
-#version 330 core
-out vec4 fragColor;
-uniform vec3 color;
-
-void main() {
-    fragColor = vec4(color, 1);
-}
-)glsl";
-
-
-Shader::Shader() {
+Shader::Shader(
+    const char * vertexShaderSource,
+    const char * fragmentShaderSource
+) {
     _program = glCreateProgram();
 
     GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertexShader, 1, &vertexShaderSource, nullptr);
     glCompileShader(vertexShader);
-    checkShader(vertexShader, "vertex");
+    checkShader(vertexShader);
 
     GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(fragmentShader, 1, &fragmentShaderSource, nullptr);
     glCompileShader(fragmentShader);
-    checkShader(fragmentShader, "fragment");
+    checkShader(fragmentShader);
 
     glAttachShader(_program, vertexShader);
     glAttachShader(_program, fragmentShader);
@@ -59,7 +42,12 @@ void Shader::setUniformVector(const String & uniform, const glm::vec3 & vector) 
     glUniform3f(offsetLoc, vector.x, vector.y, vector.z);
 }
 
-void Shader::checkShader(GLuint shader, const String & type) {
+void Shader::setUniformMatrix(const String & uniform, const glm::mat4 & matrix) {
+    GLint loc = glGetUniformLocation(_program, uniform.c_str());
+    glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(matrix));
+}
+
+void Shader::checkShader(GLuint shader) {
     GLint success;
     GLchar infoLog[512];
     glGetShaderiv(shader, GL_COMPILE_STATUS, &success);

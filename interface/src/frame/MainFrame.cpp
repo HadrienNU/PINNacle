@@ -6,23 +6,30 @@ static void error_callback(int error, const char * description) {
 }
 
 static void framebuffer_size_callback(GLFWwindow * window, int width, int height) {
-    (void) window;
-    glViewport(0, 0, width, height);
+    MainFrame * frame = static_cast<MainFrame*>(glfwGetWindowUserPointer(window));
+    if (!frame) {
+        return;
+    }
+    frame -> resize({width, height});
 }
 
-MainFrame::MainFrame(const String & title, const Size & frameSize, const Color & backgroundColor, Regions regions, ImGuiFrames imguiFrames) : 
-_title(title), _frameSize(frameSize), _backgroundColor(backgroundColor), _regions(regions), _imguiFrames(imguiFrames) {
+MainFrame::MainFrame(const String & title, const Size & frameSize, FrameGL & frameGL, ImGuiFrames imguiFrames) : 
+_title(title), _frameSize(frameSize), _frameGL(&frameGL), _imguiFrames(imguiFrames) {
     init();
 }
 
 MainFrame::~MainFrame() {
-    delete _shader;
-    delete[] _vaos;
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
     glfwDestroyWindow(_window);
     glfwTerminate();    
+}
+
+void MainFrame::resize(const Size & frameSize) {
+    _frameSize = frameSize;
+    _frameGL -> resize(_frameSize);
+    glViewport(0, 0, frameSize.width, frameSize.height);
 }
 
 void MainFrame::init() {
@@ -53,18 +60,12 @@ void MainFrame::init() {
     glfwSwapInterval(1); // vsync
 
     int fbW, fbH;
+    glfwSetWindowUserPointer(_window, this);
     glfwGetFramebufferSize(_window, &fbW, &fbH);
     glViewport(0, 0, fbW, fbH);
     glfwSetFramebufferSizeCallback(_window, framebuffer_size_callback);
     initImGUI();  
-    
-    _shader = new Shader();
-    _vaos = new VAO[_regions.size()];
-    _tableColor = generateTableColor(_regions.size());
-
-    for (size_t i = 0; i < _regions.size(); i ++) {
-        _vaos[i].setVector(0, _regions[i].createMesh());
-    }
+    _frameGL -> init(_frameSize);
 }
 
 void MainFrame::initImGUI() {
@@ -76,27 +77,12 @@ void MainFrame::initImGUI() {
     ImGui_ImplOpenGL3_Init("#version 330");
 }
 
-void MainFrame::runOpenGL() {
-    ColorGL colorGL = ColorGL(_backgroundColor);
-    glClearColor(colorGL.r, colorGL.g, colorGL.b, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
-    _shader -> bind();
-    for (size_t i = 0; i < _regions.size(); i ++) {
-        ColorGL colorGL = ColorGL(_tableColor[i]);
-        glm::vec3 color(colorGL.r, colorGL.g, colorGL.b);
-        _shader -> setUniformVector("color", color);
-        _vaos[i].bind();
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-    }        
-}
-
 void MainFrame::run() {
     while (!glfwWindowShouldClose(_window)) {
         glfwPollEvents();
 
         _imguiFrames.render();
-        runOpenGL();
-
+        _frameGL -> render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         
         glfwSwapBuffers(_window);
