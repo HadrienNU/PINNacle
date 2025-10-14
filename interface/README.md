@@ -25,6 +25,7 @@ Notes:
 
 - Linux/macOS:
 	- Build + run: `./interface/build_run.sh run`
+	- Launch (run without building): `./interface/build_run.sh launch`
 	- Build only: `./interface/build_run.sh build`
 	- Configure only: `./interface/build_run.sh configure`
 	- Rebuild (clean + build): `./interface/build_run.sh rebuild`
@@ -32,6 +33,7 @@ Notes:
 
 - Windows (PowerShell or cmd):
 	- Build + run: `interface\build_run.bat run`
+	- Launch (run without building): `interface\build_run.bat launch`
 	- Build only: `interface\build_run.bat build`
 	- Configure only: `interface\build_run.bat configure`
 	- Rebuild (clean + build): `interface\build_run.bat rebuild`
