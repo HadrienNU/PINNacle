@@ -10,10 +10,11 @@ int main() {
     regionReader.setRegionFilePath("../runs/epoch100.csv");
     Regions regions = regionReader.read();
 
-    FrameGL frameGL = FrameGL(Color(30, 30, 30));
+    FrameGL * frameGL = new FrameGL(Color(30, 30, 30));
     MainFrame mainFrame("PINNacle Interface", {800, 800}, frameGL);
-    frameGL.setRegions(regions);
+    frameGL -> setRegions(regions);
     
     mainFrame.run();
+    delete frameGL;
     return EXIT_SUCCESS;
 }

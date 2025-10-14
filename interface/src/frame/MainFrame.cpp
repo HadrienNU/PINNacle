@@ -13,8 +13,8 @@ static void framebuffer_size_callback(GLFWwindow * window, int width, int height
     frame -> resize({width, height});
 }
 
-MainFrame::MainFrame(const String & title, const Size & frameSize, FrameGL & frameGL) : 
-_title(title), _frameSize(frameSize), _frameGL(&frameGL) {
+MainFrame::MainFrame(const String & title, const Size & frameSize, FrameGL * frameGL) : 
+_title(title), _frameSize(frameSize), _frameGL(frameGL) {
     init();
 }
 
