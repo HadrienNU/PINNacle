@@ -9,5 +9,6 @@ scipy
 scikit-fem
 tqdm
 adaptmesh
+shapely
 
 torch
