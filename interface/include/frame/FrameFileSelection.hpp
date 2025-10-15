@@ -8,6 +8,7 @@
 #include <frame/FrameInfo.hpp>
 #include <memory>
 #include <filesystem>
+#include <functional>
 
 #define FRAME_FILE_SELECTION_DEFAULT_TITLE "File Selection"
 #define FRAME_FILE_SELECTION_RUNS_PATH "../runs/"
@@ -27,6 +28,8 @@ private:
     void loadFile(const String & filename);
     void scanCSVFiles();
     void scanFolders();
+    void scanDirectory(const String & path, std::vector<String> & results, bool filesOnly, const String & extension = "");
+    void renderComboBox(const char * label, const char * comboId, const std::vector<String> & items, int & selectedIndex, const char * noSelectionText, std::function<void(int)> onSelectionChanged = nullptr);
     String getCurrentFolderPath() const;
     size_t countRegions(const String & filepath);
 private:
