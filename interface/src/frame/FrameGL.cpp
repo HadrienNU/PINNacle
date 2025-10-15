@@ -35,6 +35,7 @@ FrameGL::~FrameGL() {
 }
 
 void FrameGL::init(const Size & frameSize) {
+    glEnable(GL_MULTISAMPLE);
     _shader = new Shader(vertexShaderSource, fragmentShaderSource);
     resize(frameSize);
 }
@@ -65,7 +66,7 @@ void FrameGL::setRegions(const Regions & regions) {
     for (size_t i = 0; i < numberOfRegions; i ++) {
         std::vector<glm::vec3> vertices = _regions[i].createMesh();
         _vaos[i] -> setVector(VERTEX_BUFFER, vertices);
-        _numVertices.push_back(vertices.size());
+        _numVertices.push_back((unsigned)vertices.size());
     }
 }
 

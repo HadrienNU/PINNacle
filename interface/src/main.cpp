@@ -4,8 +4,8 @@
 
 #define BACKGROUND_COLOR Color(30, 30, 30)
 #define WINDOW_TITLE "PINNacle Interface"
-#define WINDOW_WIDTH 800
-#define WINDOW_HEIGHT 800
+#define WINDOW_WIDTH 1600
+#define WINDOW_HEIGHT 900
 
 
 int main() {
