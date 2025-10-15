@@ -33,7 +33,7 @@ void error(const String & errorMessage);
 Color generateRandomColor();
 
 TableColor generateTableColor(size_t tableColorSize);
-TableColor resize(TableColor tableColor, size_t size);
+void resize(TableColor& tableColor, size_t size);
 
 #endif
 
