@@ -30,7 +30,7 @@ private:
     Size _frameSize;
     GLFWwindow * _window;
     FrameGL * _frameGL;
-    ImGuiFrames _imguiFrames;
+    ImGuiFrames & _imguiFrames;
 };
 
 #endif

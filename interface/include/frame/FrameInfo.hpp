@@ -15,10 +15,10 @@
 
 class FrameInfo : public ImGuiFrame {
 public:
-    FrameInfo(const String& title = FRAME_INFO_DEFAULT_TITLE, bool visible = true);
+    FrameInfo(const String & title = FRAME_INFO_DEFAULT_TITLE, bool visible = true);
     void render() override;
     void setRegionCount(size_t regionCount);
-    void setCurrentFile(const String& filename);
+    void setCurrentFile(const String & filename);
 private:
     size_t _regionCount;
     String _currentFile;

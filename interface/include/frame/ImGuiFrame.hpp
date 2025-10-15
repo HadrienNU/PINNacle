@@ -8,7 +8,7 @@
 
 class ImGuiFrame {
 public:
-    ImGuiFrame(const String& title, bool visible = true) 
+    ImGuiFrame(const String & title, bool visible = true) 
             : _title(title), _isVisible(visible) {}
     virtual ~ImGuiFrame() = default;
     virtual void render() = 0;

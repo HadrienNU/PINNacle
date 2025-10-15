@@ -1,6 +1,7 @@
 #include <frame/FrameInfo.hpp>
 
-FrameInfo::FrameInfo(const String& title, bool visible)
+
+FrameInfo::FrameInfo(const String & title, bool visible)
     : ImGuiFrame(title, visible),
       _regionCount(FRAME_INFO_NO_REGIONS_LOADED),
       _currentFile(FRAME_INFO_NO_FILE_LOADED) {}
