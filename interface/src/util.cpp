@@ -33,3 +33,14 @@ TableColor generateTableColor(size_t tableColorSize) {
     }
     return tableColor;
 }
+
+TableColor resize(TableColor tableColor, size_t size) {
+    if (tableColor.size() < size) {
+        size_t missing = size - tableColor.size();
+        for (size_t i = 0; i < missing; ++i) {
+            tableColor.push_back(generateRandomColor());
+        }
+    }
+    return tableColor;
+}
+
