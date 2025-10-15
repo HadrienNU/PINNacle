@@ -34,7 +34,7 @@ TableColor generateTableColor(size_t tableColorSize) {
     return tableColor;
 }
 
-void resize(TableColor& tableColor, size_t size) {
+void resizeTableColor(TableColor& tableColor, size_t size) {
     if (tableColor.size() < size) {
         size_t missingColors = size - tableColor.size();
         for (size_t i = 0; i < missingColors; ++i) {

@@ -56,7 +56,7 @@ void FrameGL::resize(const Size & frameSize) {
 void FrameGL::setRegions(const Regions & regions) {
     _regions = regions;
     size_t numberOfRegions = _regions.size();
-    _tableColor = generateTableColor(numberOfRegions);
+    resizeTableColor(_tableColor, numberOfRegions);
     _vaos.clear();
     _numVertices.clear();
     for (size_t i = 0; i < numberOfRegions; i ++) {
