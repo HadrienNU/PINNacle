@@ -25,7 +25,7 @@ private:
     void loadFile(const String & filename);
     void scanCSVFiles();
     size_t countRegions(const String & filepath);
-    
+private:
     std::shared_ptr<FrameInfo> _frameInfo;
     std::vector<String> _csvFiles;
     int _selectedFileIndex;

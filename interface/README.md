@@ -8,8 +8,8 @@ The project is built with CMake and fetches GLFW and GLM automatically.
 
 You'll need a C++17 toolchain, CMake (>= 3.16) and OpenGL development headers:
 
-- Linux (Ubuntu/Debian): build tools + OpenGL/X11 dev packages
-	- Install: `sudo apt-get install -y build-essential cmake git libx11-dev xorg-dev libglu1-mesa-dev libxi-dev libxcursor-dev libxrandr-dev`
+- Linux (Ubuntu/Debian): build tools + OpenGL/X11/Wayland dev packages
+	- Install: `sudo apt-get install -y build-essential cmake git libx11-dev xorg-dev libglu1-mesa-dev libxi-dev libxcursor-dev libxrandr-dev libwayland-dev libxkbcommon-dev`
 - macOS: Xcode command line tools or full Xcode (provides OpenGL framework)
 	- Install tools: `xcode-select --install`
 - Windows (choose one):
