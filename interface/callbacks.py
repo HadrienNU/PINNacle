@@ -1,7 +1,7 @@
 from deepxde.callbacks import Callback
+from interface.regions import Regions
 
 import torch
-import csv
 
 
 class InterfaceCallback(Callback):
@@ -9,11 +9,23 @@ class InterfaceCallback(Callback):
     def __init__(self, log_every=None):
         super(InterfaceCallback, self).__init__()
         self.log_every = log_every
+        self.gap_pde_bbox = 500
         self.epoch = 0
         self.activation_storage = []
         self.input_storage = []
         self.map_regions_id = {}
         self.nb_regions = 0
+
+    def evaluate_regions(self):
+        self.activation_storage.clear()
+        self.input_storage.clear()
+        x_range = torch.linspace(self.model.pde.bbox[0], self.model.pde.bbox[1], self.gap_pde_bbox)
+        y_range = torch.linspace(self.model.pde.bbox[2], self.model.pde.bbox[3], self.gap_pde_bbox)
+        xx, yy = torch.meshgrid(x_range, y_range, indexing='ij')
+        grid_points = torch.stack([xx.reshape(-1), yy.reshape(-1)], dim=1)
+        inside_mask = self.model.pde.geom.inside(grid_points.cpu().numpy())
+        valid_points = grid_points[inside_mask]
+        _ = self.model.predict(valid_points.cpu().numpy())
 
     def register_ready(self):
         return self.epoch % self.log_every == 0
@@ -23,9 +35,6 @@ class InterfaceCallback(Callback):
             if self.register_ready():
                 self.input_storage.append(input[0].cpu())
         return get_hook
-
-    def relu_output(self, output):
-        return (output > 0).int()
     
     def get_activation_hook(self, activation_name):
         activations_output = {
@@ -38,19 +47,20 @@ class InterfaceCallback(Callback):
             if self.register_ready():
                 self.activation_storage.append(activation_output(output).cpu())
         return get_hook
-        
+    
+    def relu_output(self, output):
+        return (output > 0).int()        
 
     def on_epoch_begin(self):
         """Called at the beginning of every epoch."""
-        if self.register_ready():
-            self.activation_storage.clear()
-            self.input_storage.clear()
 
     def on_epoch_end(self):
         """Called at the end of every epoch."""
         self.epoch += 1
         if not self.register_ready():   
             return 
+
+        self.evaluate_regions()
         activation_pattern = torch.cat(self.activation_storage, dim=1) 
         map_region = {}
 
@@ -66,8 +76,14 @@ class InterfaceCallback(Callback):
             else:                
                 map_region[id_region] = [input_point]                
 
-        region_exporter = RegionExporter(map_region)
-        region_exporter.export(f"epoch{self.epoch}")
+        geom = self.model.pde.geom
+        regions = Regions(
+            map_region,
+            circle_center=(geom.center[0], geom.center[1]),
+            circle_radius=geom.radius
+        )
+        regions.export(f"epoch{self.epoch}")
+        regions.export_hull(f"epoch{self.epoch}")
 
     def on_batch_begin(self):
         """Called at the beginning of every batch."""
@@ -101,20 +117,3 @@ class InterfaceCallback(Callback):
         """Called at the end of prediction."""
         pass
 
-
-class RegionExporter:
-    
-    def __init__(self, map_region):
-        self.map_region = map_region
-
-    def export(self, filename):
-        filename_csv = f"runs/{filename}.csv"
-        data = [['x', 'y', 'class']]
-        for region in self.map_region:
-            for point in self.map_region[region]:
-                data.append([
-                    point[0], point[1], region
-                ])
-        with open(filename_csv, mode='w', newline='', encoding='utf-8') as file:
-            writer = csv.writer(file)
-            writer.writerows(data)

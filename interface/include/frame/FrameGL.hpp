@@ -29,6 +29,7 @@ private:
     Regions _regions;
     TableColor _tableColor;
     std::vector<std::unique_ptr<VAO>> _vaos;
+    std::vector<unsigned> _numVertices;
 };
 
 #endif

@@ -20,7 +20,7 @@ Regions RegionReader::read() const {
 
     String line;
     Region currentRegion;
-    int currentIdRegion = 0;
+    int currentIdRegion = -1;
     bool header = true;
     while (std::getline(regionFile, line)) {
         if (header) {
@@ -38,6 +38,9 @@ Regions RegionReader::read() const {
         currentRegion.addPoint(point);
 
         /* Changing region */
+        if (currentIdRegion == -1) {
+            currentIdRegion = std::stoi(idRegion);
+        }
         if (std::stoi(idRegion) != currentIdRegion) {
             currentIdRegion = std::stoi(idRegion);
             regions.push_back(currentRegion);
