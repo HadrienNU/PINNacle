@@ -38,7 +38,7 @@ class InterfaceCallback(Callback):
     
     def get_activation_hook(self, activation_name):
         activations_output = {
-            "tanh": self.relu_output, # Need to be changed
+            "tanh": self.tanh_output,
             "relu": self.relu_output
         }
 
@@ -47,7 +47,13 @@ class InterfaceCallback(Callback):
             if self.register_ready():
                 self.activation_storage.append(activation_output(output).cpu())
         return get_hook
-    
+
+    def tanh_output(self, output):
+        result = torch.ones_like(output, dtype=torch.int)
+        result[output < -0.05] = 0
+        result[output > 0.05] = 2
+        return result
+
     def relu_output(self, output):
         return (output > 0).int()        
 
