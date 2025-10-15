@@ -76,8 +76,14 @@ class InterfaceCallback(Callback):
             else:                
                 map_region[id_region] = [input_point]                
 
-        regions = Regions(map_region)
+        geom = self.model.pde.geom
+        regions = Regions(
+            map_region,
+            circle_center=(geom.center[0], geom.center[1]),
+            circle_radius=geom.radius
+        )
         regions.export(f"epoch{self.epoch}")
+        regions.export_hull(f"epoch{self.epoch}")
 
     def on_batch_begin(self):
         """Called at the beginning of every batch."""
