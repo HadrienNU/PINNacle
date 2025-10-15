@@ -57,9 +57,12 @@ void FrameGL::setRegions(const Regions & regions) {
     _regions = regions;
     size_t numberOfRegions = _regions.size();
     _tableColor = generateTableColor(numberOfRegions);
-    _vaos.resize(numberOfRegions);
+    _vaos.clear();
     for (size_t i = 0; i < numberOfRegions; i ++) {
-        _vaos[i].setVector(VERTEX_BUFFER, _regions[i].createMesh());
+        _vaos.push_back(std::make_unique<VAO>(1));
+    }
+    for (size_t i = 0; i < numberOfRegions; i ++) {
+        _vaos[i] -> setVector(VERTEX_BUFFER, _regions[i].createMesh());
     }
 }
 
@@ -77,7 +80,7 @@ void FrameGL::render() {
         ColorGL colorGL = ColorGL(_tableColor[i]);
         glm::vec3 color(colorGL.r, colorGL.g, colorGL.b);
         _shader -> setUniformVector("color", color);
-        _vaos[i].bind();
+        _vaos[i] -> bind();
         glDrawArrays(GL_TRIANGLES, 0, 6);
     }   
 }

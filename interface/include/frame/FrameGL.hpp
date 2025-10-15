@@ -5,6 +5,7 @@
 #include <opengl/Shader.hpp>
 #include <opengl/VAO.hpp>
 #include <region/Region.hpp>
+#include <memory>
 
 #define DEFAULT_FOV 45.0f
 #define DEFAULT_NEAR_PLANE 0.1f
@@ -27,7 +28,7 @@ private:
     ColorGL _backgroundColor;
     Regions _regions;
     TableColor _tableColor;
-    std::vector<VAO> _vaos;
+    std::vector<std::unique_ptr<VAO>> _vaos;
 };
 
 #endif
