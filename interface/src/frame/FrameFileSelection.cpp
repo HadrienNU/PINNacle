@@ -17,23 +17,14 @@ void FrameFileSelection::render() {
         return;
     }
 
-    ImGuiIO & io = ImGui::GetIO();
-    ImVec2 windowSize(350, 165);
-    ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x - windowSize.x, 0), ImGuiCond_FirstUseEver);
+    ImVec2 windowSize(300, 140);
+    ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(windowSize, ImGuiCond_FirstUseEver);
     
     ImGui::Begin(_title.c_str(), &_isVisible);
 
     ImGui::TextColored(ImVec4(0.2f, 0.8f, 1.0f, 1.0f), FRAME_FILE_SELECTION_TITLE);
     ImGui::Separator();
-
-    if (ImGui::Button(FRAME_FILE_SELECTION_REFRESH_BUTTON)) {
-        scanFolders();
-        scanCSVFiles();
-    }
-
-    ImGui::SameLine();
-    ImGui::Spacing();
     
     renderComboBox(
         FRAME_FILE_SELECTION_FOLDER_LABEL,
