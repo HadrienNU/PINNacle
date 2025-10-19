@@ -9,7 +9,7 @@ class InterfaceCallback(Callback):
     def __init__(self, log_every=None):
         super(InterfaceCallback, self).__init__()
         self.log_every = log_every
-        self.gap_pde_bbox = 500
+        self.resolution = 500
         self.epoch = 0
         self.activation_storage = []
         self.input_storage = []
@@ -19,8 +19,8 @@ class InterfaceCallback(Callback):
     def evaluate_regions(self):
         self.activation_storage.clear()
         self.input_storage.clear()
-        x_range = torch.linspace(self.model.pde.bbox[0], self.model.pde.bbox[1], self.gap_pde_bbox)
-        y_range = torch.linspace(self.model.pde.bbox[2], self.model.pde.bbox[3], self.gap_pde_bbox)
+        x_range = torch.linspace(self.model.pde.bbox[0], self.model.pde.bbox[1], self.resolution)
+        y_range = torch.linspace(self.model.pde.bbox[2], self.model.pde.bbox[3], self.resolution)
         xx, yy = torch.meshgrid(x_range, y_range, indexing='ij')
         grid_points = torch.stack([xx.reshape(-1), yy.reshape(-1)], dim=1)
         inside_mask = self.model.pde.geom.inside(grid_points.cpu().numpy())
@@ -85,11 +85,11 @@ class InterfaceCallback(Callback):
         geom = self.model.pde.geom
         regions = Regions(
             map_region,
-            circle_center=(geom.center[0], geom.center[1]),
-            circle_radius=geom.radius
+            (geom.center[0], geom.center[1]),
+            geom.radius,
+            self.resolution
         )
         regions.export(f"epoch{self.epoch}")
-        regions.export_hull(f"epoch{self.epoch}")
 
     def on_batch_begin(self):
         """Called at the beginning of every batch."""
