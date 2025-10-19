@@ -8,13 +8,15 @@
 #include <frame/FrameInfo.hpp>
 #include <memory>
 #include <filesystem>
+#include <functional>
 
 #define FRAME_FILE_SELECTION_DEFAULT_TITLE "File Selection"
 #define FRAME_FILE_SELECTION_RUNS_PATH "../runs/"
 #define FRAME_FILE_SELECTION_TITLE "Select CSV File"
-#define FRAME_FILE_SELECTION_REFRESH_BUTTON "Refresh File List"
 #define FRAME_FILE_SELECTION_LABEL "CSV File:"
 #define FRAME_FILE_SELECTION_NO_FILE "No file selected"
+#define FRAME_FILE_SELECTION_FOLDER_LABEL "Folder:"
+#define FRAME_FILE_SELECTION_NO_FOLDER "No folder selected"
 
 
 class FrameFileSelection : public ImGuiFrame {
@@ -24,11 +26,17 @@ public:
 private:
     void loadFile(const String & filename);
     void scanCSVFiles();
+    void scanFolders();
+    void scanDirectory(const String & path, std::vector<String> & results, bool filesOnly, const String & extension = "");
+    void renderComboBox(const char * label, const char * comboId, const std::vector<String> & items, int & selectedIndex, const char * noSelectionText, std::function<void(int)> onSelectionChanged = nullptr);
+    String getCurrentFolderPath() const;
     size_t countRegions(const String & filepath);
 private:
     std::shared_ptr<FrameInfo> _frameInfo;
     std::vector<String> _csvFiles;
+    std::vector<String> _folders;
     int _selectedFileIndex;
+    int _selectedFolderIndex;
     RegionReader _regionReader;
     FrameGL * _frameGL;
 };

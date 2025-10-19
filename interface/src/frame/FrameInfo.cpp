@@ -11,7 +11,10 @@ void FrameInfo::render() {
         return;
     }
 
-    ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver);
+    ImGuiIO & io = ImGui::GetIO();
+    ImVec2 windowSize(300, 125);
+    ImGui::SetNextWindowSize(windowSize, ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x - windowSize.x, 0), ImGuiCond_Always);
     
     ImGui::Begin(_title.c_str(), &_isVisible);
 

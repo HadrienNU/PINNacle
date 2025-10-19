@@ -6,7 +6,9 @@ FrameFileSelection::FrameFileSelection(FrameGL * frameGL, std::shared_ptr<FrameI
     : ImGuiFrame(title, visible),
       _frameInfo(frameInfo),
       _selectedFileIndex(-1),
+      _selectedFolderIndex(0),
       _frameGL(frameGL) {
+    scanFolders();
     scanCSVFiles();
 }
 
@@ -15,49 +17,45 @@ void FrameFileSelection::render() {
         return;
     }
 
-    ImGuiIO & io = ImGui::GetIO();
-    ImVec2 windowSize(350, 120);
-    ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x - windowSize.x, 0), ImGuiCond_FirstUseEver);
+    ImVec2 windowSize(300, 140);
+    ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(windowSize, ImGuiCond_FirstUseEver);
     
     ImGui::Begin(_title.c_str(), &_isVisible);
 
     ImGui::TextColored(ImVec4(0.2f, 0.8f, 1.0f, 1.0f), FRAME_FILE_SELECTION_TITLE);
     ImGui::Separator();
-
-    if (ImGui::Button(FRAME_FILE_SELECTION_REFRESH_BUTTON)) {
-        scanCSVFiles();
-    }
-
-    ImGui::SameLine();
     
-    const char * currentSelection = (_selectedFileIndex >= 0 && _selectedFileIndex < static_cast<int>(_csvFiles.size())) 
-                                     ? _csvFiles[_selectedFileIndex].c_str() 
-                                     : FRAME_FILE_SELECTION_NO_FILE;
+    renderComboBox(
+        FRAME_FILE_SELECTION_FOLDER_LABEL,
+        "##foldercombo",
+        _folders,
+        _selectedFolderIndex,
+        FRAME_FILE_SELECTION_NO_FOLDER,
+        [this](int) {
+            _selectedFileIndex = -1;
+            scanCSVFiles();
+        }
+    );
     
     ImGui::Spacing();
-    ImGui::Text(FRAME_FILE_SELECTION_LABEL);
     
-    if (ImGui::BeginCombo("##csvcombo", currentSelection)) {
-        for (size_t i = 0; i < _csvFiles.size(); i++) {
-            const bool isSelected = (_selectedFileIndex == static_cast<int>(i));
-            if (ImGui::Selectable(_csvFiles[i].c_str(), isSelected)) {
-                _selectedFileIndex = static_cast<int>(i);
-                loadFile(_csvFiles[i]);
-            }
-
-            if (isSelected) {
-                ImGui::SetItemDefaultFocus();
-            }
+    renderComboBox(
+        FRAME_FILE_SELECTION_LABEL,
+        "##csvcombo",
+        _csvFiles,
+        _selectedFileIndex,
+        FRAME_FILE_SELECTION_NO_FILE,
+        [this](int index) {
+            loadFile(_csvFiles[index]);
         }
-        ImGui::EndCombo();
-    }
+    );
 
     ImGui::End();
 }
 
 void FrameFileSelection::loadFile(const String& filename) {
-    String filepath = String(FRAME_FILE_SELECTION_RUNS_PATH) + filename;
+    String filepath = getCurrentFolderPath() + filename;
     
     _regionReader.setRegionFilePath(filepath);
     Regions regions = _regionReader.read();
@@ -73,24 +71,75 @@ void FrameFileSelection::loadFile(const String& filename) {
 
 void FrameFileSelection::scanCSVFiles() {
     _csvFiles.clear();
+    scanDirectory(getCurrentFolderPath(), _csvFiles, true, ".csv");
+}
+
+void FrameFileSelection::scanFolders() {
+    _folders.clear();
+    _folders.push_back("runs/");
     
+    std::vector<String> subFolders;
+    scanDirectory(FRAME_FILE_SELECTION_RUNS_PATH, subFolders, false);
+    
+    for (const auto & folder : subFolders) {
+        _folders.push_back("runs/" + folder + "/");
+    }
+    
+    std::sort(_folders.begin(), _folders.end());
+}
+
+void FrameFileSelection::scanDirectory(const String & path, std::vector<String> & results, bool filesOnly, const String & extension) {
     try {
-        if (!std::filesystem::exists(FRAME_FILE_SELECTION_RUNS_PATH)) {
+        if (!std::filesystem::exists(path)) {
             return;
         }
 
-        for (const std::filesystem::directory_entry & entry : std::filesystem::directory_iterator(FRAME_FILE_SELECTION_RUNS_PATH)) {
-            if (entry.is_regular_file()) {
+        for (const std::filesystem::directory_entry & entry : std::filesystem::directory_iterator(path)) {
+            if (filesOnly && entry.is_regular_file()) {
                 String filename = entry.path().filename().string();
-                if (filename.size() >= 4 && filename.substr(filename.size() - 4) == ".csv") {
-                    _csvFiles.push_back(filename);
+                if (extension.empty() || (filename.size() >= extension.size() && filename.substr(filename.size() - extension.size()) == extension)) {
+                    results.push_back(filename);
                 }
+            } else if (!filesOnly && entry.is_directory()) {
+                results.push_back(entry.path().filename().string());
             }
         }
 
-        std::sort(_csvFiles.begin(), _csvFiles.end());
+        std::sort(results.begin(), results.end());
     } catch (const std::filesystem::filesystem_error& e) {
-        std::cerr << "Error scanning CSV files: " << e.what() << std::endl;
+        std::cerr << "Error scanning directory '" << path << "': " << e.what() << std::endl;
     }
+}
+
+void FrameFileSelection::renderComboBox(const char * label, const char * comboId, const std::vector<String> & items, int & selectedIndex, const char * noSelectionText, std::function<void(int)> onSelectionChanged) {
+    ImGui::Text("%s", label);
+    
+    bool isSelected = (selectedIndex >= 0 && selectedIndex < static_cast<int>(items.size()));
+    const char * currentSelection = isSelected ? items[selectedIndex].c_str() : noSelectionText;
+    
+    if (ImGui::BeginCombo(comboId, currentSelection)) {
+        for (size_t i = 0; i < items.size(); i++) {
+            const bool isItemSelected = (selectedIndex == static_cast<int>(i));
+            if (ImGui::Selectable(items[i].c_str(), isItemSelected)) {
+                selectedIndex = static_cast<int>(i);
+                if (onSelectionChanged) {
+                    onSelectionChanged(selectedIndex);
+                }
+            }
+
+            if (isItemSelected) {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
+}
+
+String FrameFileSelection::getCurrentFolderPath() const {
+    bool isValidFolder = (_selectedFolderIndex >= 0 && _selectedFolderIndex < static_cast<int>(_folders.size()));
+    if (isValidFolder) {
+        return "../" + _folders[_selectedFolderIndex];
+    }
+    return FRAME_FILE_SELECTION_RUNS_PATH;
 }
 
