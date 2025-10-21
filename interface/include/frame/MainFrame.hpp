@@ -22,6 +22,7 @@ public:
     ~MainFrame();    
     void resize(const Size & frameSize);
     void run();
+    FrameGL* getFrameGL() const { return _frameGL; }
 private:
     void init();
     void initImGUI();

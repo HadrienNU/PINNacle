@@ -13,6 +13,42 @@ static void framebuffer_size_callback(GLFWwindow * window, int width, int height
     frame -> resize({width, height});
 }
 
+static void scroll_callback(GLFWwindow *window, double xoffset, double yoffset) {
+    MainFrame *frame = static_cast<MainFrame *>(glfwGetWindowUserPointer(window));
+    if (!frame || !frame->getFrameGL()) {
+        return;
+    }
+    frame->getFrameGL()->zoom(static_cast<float>(yoffset));
+}
+
+static bool rightMousePressed = false;
+static double lastX = 0.0, lastY = 0.0;
+static void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
+    if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+        rightMousePressed = (action == GLFW_PRESS);
+        if (rightMousePressed) {
+            glfwGetCursorPos(window, &lastX, &lastY);
+        }
+    }
+}
+
+static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
+    if (!rightMousePressed)
+        return;
+
+    double deltaX = xpos - lastX;
+    double deltaY = ypos - lastY;
+
+    lastX = xpos;
+    lastY = ypos;
+
+    MainFrame* frame = static_cast<MainFrame*>(glfwGetWindowUserPointer(window));
+    if (frame && frame->getFrameGL()) {
+        frame->getFrameGL()->translateCamera((float)deltaX, (float)deltaY);
+    }
+}
+
+
 MainFrame::MainFrame(const String & title, const Size & frameSize, FrameGL * frameGL, ImGuiFrames & imguiFrames) : 
 _title(title), _frameSize(frameSize), _frameGL(frameGL), _imguiFrames(imguiFrames) {
     init();
@@ -65,6 +101,9 @@ void MainFrame::init() {
     glfwGetFramebufferSize(_window, &fbW, &fbH);
     glViewport(0, 0, fbW, fbH);
     glfwSetFramebufferSizeCallback(_window, framebuffer_size_callback);
+    glfwSetScrollCallback(_window, scroll_callback);
+    glfwSetMouseButtonCallback(_window, mouse_button_callback);
+    glfwSetCursorPosCallback(_window, cursor_position_callback);
     initImGUI();  
     _frameGL -> init(_frameSize);
 }

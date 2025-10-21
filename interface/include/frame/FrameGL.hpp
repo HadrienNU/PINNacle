@@ -12,6 +12,8 @@
 #define DEFAULT_FAR_PLANE 100.0f
 #define DEFAULT_DISTANCE 3.0f
 #define VERTEX_BUFFER 0
+#define MIN_DISTANCE 0.1f 
+#define ZOOM_STEP 0.2f
 
 
 class FrameGL {
@@ -22,7 +24,11 @@ public:
     void resize(const Size & frameSize);
     void setRegions(const Regions & regions);
     void render();
+    void zoom(float delta);
+    void translateCamera(float deltaX, float deltaY);
+
 private:
+    void updateCameraMatrix();
     Shader * _shader;    
     glm::mat4 _cameraMatrix;
     ColorGL _backgroundColor;
@@ -30,6 +36,10 @@ private:
     TableColor _tableColor;
     std::vector<std::unique_ptr<VAO>> _vaos;
     std::vector<unsigned> _numVertices;
+    float _distance;
+    float _aspectRatio;
+    glm::vec3 _cameraCenter;
+
 };
 
 #endif
