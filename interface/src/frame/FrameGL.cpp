@@ -60,8 +60,8 @@ void FrameGL::updateCameraMatrix() {
 
     glm::mat4 view = glm::lookAt(
         cameraPos,
-        _cameraCenter,                // on regarde vers le centre
-        glm::vec3(0.0f, 1.0f, 0.0f)   // up = Y+
+        _cameraCenter,          
+        glm::vec3(0.0f, 1.0f, 0.0f) 
     );
 
     _cameraMatrix = projection * view;
@@ -70,10 +70,7 @@ void FrameGL::updateCameraMatrix() {
 
 
 void FrameGL::zoom(float delta) {
-    // delta positif -> zoom avant, delta négatif -> zoom arrière
     _distance -= delta * ZOOM_STEP;
-
-    // sécurité pour ne pas passer derrière ou à 0
     if (_distance < MIN_DISTANCE)
         _distance = MIN_DISTANCE;
 
@@ -81,9 +78,8 @@ void FrameGL::zoom(float delta) {
 }
 
 void FrameGL::translateCamera(float deltaX, float deltaY) {
-    const float sensitivity = 0.005f * _distance; // dépend de la distance pour un effet naturel
+    const float sensitivity = 0.005f * _distance;
 
-    // Translation dans le plan caméra (X/Y)
     _cameraCenter.x -= deltaX * sensitivity;
     _cameraCenter.y += deltaY * sensitivity;
 
