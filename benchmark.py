@@ -25,6 +25,7 @@ from src.pde.electromag import Magnetism_2D, Electric_2D, Magnetism_Ritz, Electr
 
 
 from interface.callbacks import InterfaceCallback
+from watcher import watch
 
 # It is recommended not to modify this example file.
 # Please copy it as benchmark_xxx.py and make changes according to your own ideas.
@@ -87,6 +88,7 @@ if __name__ == "__main__":
         dde.config.set_random_seed(seed)
     date_str = time.strftime('%m.%d-%H.%M.%S', time.localtime())
     trainer = Trainer(f"{date_str}-{command_args.name}", command_args.device)
+
 
     for pde_config in pde_list:
 
@@ -187,12 +189,13 @@ if __name__ == "__main__":
                     #TesterCallback(log_every=command_args.log_every),
                     #PlotCallback(log_every=command_args.plot_every, fast=True),
                     #LossCallback(verbose=True),
-                    InterfaceCallback(log_every=command_args.log_every),
+                    InterfaceCallback(date=date_str, log_every=command_args.log_every),
                 ]
             }
         )
 
     trainer.setup(__file__, seed)
+    watch(folder="runs", pattern="*.csv", interval=100e-3)
     trainer.set_repeat(command_args.repeat)
     trainer.train_all()
     trainer.summary()
