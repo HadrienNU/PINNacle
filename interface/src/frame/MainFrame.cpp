@@ -13,7 +13,7 @@ static void framebuffer_size_callback(GLFWwindow * window, int width, int height
     frame -> resize({width, height});
 }
 
-static void scroll_callback(GLFWwindow *window, double xoffset, double yoffset) {
+static void scroll_callback(GLFWwindow *window, double /*xoffset*/, double yoffset) {
     MainFrame *frame = static_cast<MainFrame *>(glfwGetWindowUserPointer(window));
     if (!frame || !frame->getFrameGL()) {
         return;
@@ -21,32 +21,43 @@ static void scroll_callback(GLFWwindow *window, double xoffset, double yoffset) 
     frame->getFrameGL()->zoom(static_cast<float>(yoffset));
 }
 
-static bool rightMousePressed = false;
+static bool rightButtonPressed = false;
 static double lastX = 0.0, lastY = 0.0;
-static void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
-    if (button == GLFW_MOUSE_BUTTON_RIGHT) {
-        rightMousePressed = (action == GLFW_PRESS);
-        if (rightMousePressed) {
-            glfwGetCursorPos(window, &lastX, &lastY);
-        }
-    }
+static bool leftButtonPressed = false;
+
+static void mouse_button_callback(GLFWwindow* window, int button, int action, int /*mods*/) {
+    MainFrame* frame = static_cast<MainFrame*>(glfwGetWindowUserPointer(window));
+    if (!frame) return;
+
+    if (button == GLFW_MOUSE_BUTTON_RIGHT)
+        rightButtonPressed = (action == GLFW_PRESS);
+
+    if (button == GLFW_MOUSE_BUTTON_LEFT)
+        leftButtonPressed = (action == GLFW_PRESS);
+
+    if (action == GLFW_PRESS)
+        glfwGetCursorPos(window, &lastX, &lastY);
 }
 
+
 static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
-    if (!rightMousePressed)
-        return;
+    MainFrame* frame = static_cast<MainFrame*>(glfwGetWindowUserPointer(window));
+    if (!frame) return;
 
-    double deltaX = xpos - lastX;
-    double deltaY = ypos - lastY;
+    static const float ROTATION_SPEED = 0.005f;
 
+    double dx = xpos - lastX;
+    double dy = ypos - lastY;
     lastX = xpos;
     lastY = ypos;
 
-    MainFrame* frame = static_cast<MainFrame*>(glfwGetWindowUserPointer(window));
-    if (frame && frame->getFrameGL()) {
-        frame->getFrameGL()->translateCamera((float)deltaX, (float)deltaY);
+    if (leftButtonPressed) {
+        frame->getFrameGL()->rotateCamera(dx * ROTATION_SPEED, dy * ROTATION_SPEED);
+    } else if (rightButtonPressed) {
+        frame->getFrameGL()->translateCamera(dx * 0.01f, -dy * 0.01f);
     }
 }
+
 
 
 MainFrame::MainFrame(const String & title, const Size & frameSize, FrameGL * frameGL, ImGuiFrames & imguiFrames) : 
@@ -94,7 +105,7 @@ void MainFrame::init() {
     
     glfwMakeContextCurrent(_window);
     gladLoadGL();
-    glfwSwapInterval(1); // vsync
+    glfwSwapInterval(1);
 
     int fbW, fbH;
     glfwSetWindowUserPointer(_window, this);
@@ -121,8 +132,10 @@ void MainFrame::run() {
     while (!glfwWindowShouldClose(_window)) {
         glfwPollEvents();
 
+
         _imguiFrames.render();
         _frameGL -> render();
+        
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         
         glfwSwapBuffers(_window);

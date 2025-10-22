@@ -26,6 +26,8 @@ public:
     void render();
     void zoom(float delta);
     void translateCamera(float deltaX, float deltaY);
+    void rotateCamera(float deltaYaw, float deltaPitch);
+    void resetCamera();
 
 private:
     void updateCameraMatrix();
@@ -38,6 +40,8 @@ private:
     std::vector<unsigned> _numVertices;
     float _distance;
     float _aspectRatio;
+    float _yaw; 
+    float _pitch;
     glm::vec3 _cameraCenter;
 
 };
