@@ -14,9 +14,10 @@ void main() {
 
 const char * fragmentShaderSource = R"glsl(
 #version 330 core
-out vec4 fragColor;
 
 uniform vec3 color;
+
+out vec4 fragColor;
 
 void main() {
     fragColor = vec4(color, 1);
@@ -90,7 +91,6 @@ void FrameGL::translateCamera(float deltaX, float deltaY) {
 void FrameGL::setRegions(const Regions & regions) {
     _regions = regions;
     size_t numberOfRegions = _regions.size();
-    resizeTableColor(_tableColor, numberOfRegions);
     _vaos.clear();
     _numVertices.clear();
     for (size_t i = 0; i < numberOfRegions; i ++) {
@@ -100,6 +100,11 @@ void FrameGL::setRegions(const Regions & regions) {
         std::vector<glm::vec3> vertices = _regions[i].createMesh();
         _vaos[i] -> setVector(VERTEX_BUFFER, vertices);
         _numVertices.push_back((unsigned)vertices.size());
+
+        int idRegion = _regions[i].getId();
+        if (_tableColor.find(idRegion) == _tableColor.end()) {
+            _tableColor[idRegion] = generateRandomColor();
+        }
     }
 }
 
@@ -114,10 +119,12 @@ void FrameGL::render() {
     _shader -> bind();
     _shader -> setUniformMatrix("cameraMatrix", _cameraMatrix);
     for (size_t i = 0; i < _regions.size(); i ++) {
-        ColorGL colorGL = ColorGL(_tableColor[i]);
+        _vaos[i] -> bind();
+        int idRegion = _regions[i].getId();
+        Color colorRegion = _tableColor[idRegion];
+        ColorGL colorGL = ColorGL(colorRegion);
         glm::vec3 color(colorGL.r, colorGL.g, colorGL.b);
         _shader -> setUniformVector("color", color);
-        _vaos[i] -> bind();
         glDrawArrays(GL_TRIANGLES, 0, _numVertices[i]);
     }   
 }
