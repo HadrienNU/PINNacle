@@ -21,7 +21,7 @@ from src.utils.args import parse_hidden_layers, parse_loss_weight
 from src.utils.callbacks import TesterCallback, PlotCallback, LossCallback
 from src.utils.rar import rar_wrapper
 
-from src.pde.electromag import Magnetism_2D, Electric_2D, Magnetism_Ritz, Electric_Ritz
+from src.pde.electromag import Magnetism_2D, Electric_2D, Magnetism_Ritz, Electric_Ritz, Electric_Ritz_3D
 
 
 from interface.callbacks import InterfaceCallback
@@ -38,7 +38,7 @@ from interface.callbacks import InterfaceCallback
 #     [PoissonND, HeatND]
 
 pde_list = [
-    Electric_Ritz
+    Electric_Ritz_3D
 ]
 
 # pde_list += \
