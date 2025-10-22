@@ -68,6 +68,9 @@ class InterfaceCallback(Callback):
             return 
 
         self.evaluate_regions()
+        print(f"Nombre d'activation : {len(self.activation_storage)}")
+        self.activation_storage.pop()
+        print(f"Nombre d'activation apres sup la derniere : {len(self.activation_storage)}")
         activation_pattern = torch.cat(self.activation_storage, dim=1) 
         map_region = {}
 
