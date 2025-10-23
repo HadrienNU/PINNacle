@@ -131,6 +131,7 @@ void FrameGL::setRegions(const Regions & regions) {
             _tableColor[idRegion] = generateRandomColor();
         }
     }
+    resetCamera();
 }
 
 void FrameGL::render() {
