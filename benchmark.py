@@ -25,7 +25,6 @@ from src.pde.electromag import Magnetism_2D, Electric_2D, Magnetism_Ritz, Electr
 
 
 from interface.callbacks import InterfaceCallback
-from watcher import watch
 
 # It is recommended not to modify this example file.
 # Please copy it as benchmark_xxx.py and make changes according to your own ideas.
@@ -195,7 +194,6 @@ if __name__ == "__main__":
         )
 
     trainer.setup(__file__, seed)
-    watch(folder="runs", pattern="*.csv", interval=100e-3)
     trainer.set_repeat(command_args.repeat)
     trainer.train_all()
     trainer.summary()
