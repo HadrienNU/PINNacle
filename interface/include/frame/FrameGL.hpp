@@ -7,14 +7,30 @@
 #include <region/Region.hpp>
 #include <memory>
 
-#define DEFAULT_FOV 45.0f
+#define DEFAULT_FOV_DEG 45.0f
+#define PITCH_ANGLE_DEG_LIMIT 89.0f
+
 #define DEFAULT_NEAR_PLANE 0.1f
 #define DEFAULT_FAR_PLANE 100.0f
 #define DEFAULT_DISTANCE 3.0f
-#define VERTEX_BUFFER 0
 #define MIN_DISTANCE 0.1f 
-#define ZOOM_STEP 0.2f
 
+#define VERTEX_BUFFER 0
+
+#define ZOOM_STEP 0.2f
+#define TRANSLATE_SENSIBILITY 0.0005f
+#define ROTATION_SPEED 0.005f
+
+
+struct Camera {    
+    float distance;
+    float aspectRatio;
+    float yaw; 
+    float pitch;
+    glm::vec3 position;
+    glm::vec3 lookAt;
+    glm::mat4 transform;
+};
 
 class FrameGL {
 public:
@@ -24,26 +40,20 @@ public:
     void resize(const Size & frameSize);
     void setRegions(const Regions & regions);
     void render();
-    void zoom(float delta);
+    void scaleCamera(float delta);
     void translateCamera(float deltaX, float deltaY);
     void rotateCamera(float deltaYaw, float deltaPitch);
     void resetCamera();
-
 private:
-    void updateCameraMatrix();
+    void updateCamera();
+private:
     Shader * _shader;    
-    glm::mat4 _cameraMatrix;
-    ColorGL _backgroundColor;
     Regions _regions;
-    TableColor _tableColor;
+    TableColor _tableColor;   
+    ColorGL _backgroundColor;   
+    Camera _camera;
     std::vector<std::unique_ptr<VAO>> _vaos;
-    std::vector<unsigned> _numVertices;
-    float _distance;
-    float _aspectRatio;
-    float _yaw; 
-    float _pitch;
-    glm::vec3 _cameraCenter;
-
+    std::vector<unsigned> _numVertices;  
 };
 
 #endif

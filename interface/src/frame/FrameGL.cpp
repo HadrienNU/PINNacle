@@ -28,12 +28,14 @@ void main() {
 FrameGL::FrameGL(const Color & backgroundColor) :
 _backgroundColor(backgroundColor) {
     _shader = nullptr;    
-    _cameraMatrix = glm::mat4(1.0f);
-    _distance = DEFAULT_DISTANCE;
-    _yaw = 0.0f;
-    _pitch = 0.0f;
-   _cameraCenter = glm::vec3(0.0f, 0.0f, 0.0f);
-    _aspectRatio = 1.0f;
+    
+    _camera.distance = DEFAULT_DISTANCE;
+    _camera.aspectRatio = 1.0f;
+    _camera.yaw = 0.0f;
+    _camera.pitch = 0.0f;    
+    _camera.position = glm::vec3(0.0f);
+    _camera.lookAt = glm::vec3(0.0f);
+    _camera.transform = glm::mat4(1.0f);
 }
 
 FrameGL::~FrameGL() {
@@ -47,77 +49,78 @@ void FrameGL::init(const Size & frameSize) {
 }
 
 void FrameGL::resize(const Size & frameSize) {    
-    _aspectRatio = static_cast<float>(frameSize.width) / frameSize.height;
-    updateCameraMatrix();
+    _camera.aspectRatio = static_cast<float>(frameSize.width) / frameSize.height;
+    updateCamera();
 }
 
-void FrameGL::updateCameraMatrix() {
-    const float pitchLimit = glm::radians(89.0f);
-    _pitch = glm::clamp(_pitch, -pitchLimit, pitchLimit);
+void FrameGL::updateCamera() {
+    float pitchLimit = glm::radians(PITCH_ANGLE_DEG_LIMIT);
+    _camera.pitch = glm::clamp(
+        _camera.pitch, 
+        -pitchLimit, 
+        pitchLimit
+    );
 
-    glm::vec3 cameraPos;
-    cameraPos.x = _cameraCenter.x + _distance * cos(_pitch) * sin(_yaw);
-    cameraPos.y = _cameraCenter.y + _distance * sin(_pitch);
-    cameraPos.z = _cameraCenter.z + _distance * cos(_pitch) * cos(_yaw);
+    glm::vec3 & position = _camera.position;
+    position.x = _camera.distance * cos(_camera.pitch) * sin(_camera.yaw);
+    position.y = _camera.distance * sin(_camera.pitch);
+    position.z = _camera.distance * cos(_camera.pitch) * cos(_camera.yaw);
+    position += _camera.lookAt;
 
     glm::mat4 projection = glm::perspective(
-        glm::radians(DEFAULT_FOV),
-        _aspectRatio,
+        glm::radians(DEFAULT_FOV_DEG),
+        _camera.aspectRatio,
         DEFAULT_NEAR_PLANE,
         DEFAULT_FAR_PLANE
     );
 
     glm::mat4 view = glm::lookAt(
-        cameraPos,
-        _cameraCenter,
+        position,
+        _camera.lookAt,
         glm::vec3(0.0f, 1.0f, 0.0f)
     );
 
-    _cameraMatrix = projection * view;
+    _camera.transform = projection * view;
 }
 
-
-
-
-void FrameGL::zoom(float delta) {
-    _distance -= delta * ZOOM_STEP;
-    if (_distance < MIN_DISTANCE)
-        _distance = MIN_DISTANCE;
-
-    updateCameraMatrix();
+void FrameGL::scaleCamera(float delta) {
+    _camera.distance -= delta * ZOOM_STEP;
+    if (_camera.distance < MIN_DISTANCE) {
+        _camera.distance = MIN_DISTANCE;
+    }
+    updateCamera();
 }
 
 void FrameGL::translateCamera(float deltaX, float deltaY) {
-    const float sensitivity = 0.005f * _distance;
-
-    _cameraCenter.x -= deltaX * sensitivity;
-    _cameraCenter.y += deltaY * sensitivity;
-
-    updateCameraMatrix();
+    float sensitivity = TRANSLATE_SENSIBILITY * _camera.distance;
+    
+    glm::vec3 centerGaze(0.0f, 0.0f, 1.0f);
+    glm::vec3 cameraGaze = glm::normalize(_camera.lookAt - _camera.position);
+    float behind = glm::dot(centerGaze, cameraGaze) > 0 ? -1.0f: 1.0f;
+    
+    _camera.lookAt.x += deltaX * sensitivity * behind;
+    _camera.lookAt.y -= deltaY * sensitivity;
+    updateCamera();
 }
 
 void FrameGL::rotateCamera(float deltaYaw, float deltaPitch) {
-    _yaw += deltaYaw;
-    _pitch += deltaPitch;
-    updateCameraMatrix();
+    _camera.yaw += deltaYaw * ROTATION_SPEED;
+    _camera.pitch -= deltaPitch * ROTATION_SPEED;
+    updateCamera();
 }
 
 void FrameGL::resetCamera() {
-    _yaw = 0.0f;
-    _pitch = 0.0f;
-    _distance = DEFAULT_DISTANCE;
-    _cameraCenter = glm::vec3(0.0f, 0.0f, 0.0f);
-    updateCameraMatrix();
+    _camera.yaw = 0.0f;
+    _camera.pitch = 0.0f;
+    _camera.distance = DEFAULT_DISTANCE;
+    updateCamera();
 }
 
-
-
-
 void FrameGL::setRegions(const Regions & regions) {
-    _regions = regions;
-    size_t numberOfRegions = _regions.size();
+    _regions = regions;    
     _vaos.clear();
     _numVertices.clear();
+    size_t numberOfRegions = _regions.size();
     for (size_t i = 0; i < numberOfRegions; i ++) {
         _vaos.push_back(std::make_unique<VAO>(1));
     }
@@ -142,8 +145,9 @@ void FrameGL::render() {
         1.0f
     );
     glClear(GL_COLOR_BUFFER_BIT);
+    
     _shader -> bind();
-    _shader -> setUniformMatrix("cameraMatrix", _cameraMatrix);
+    _shader -> setUniformMatrix("cameraMatrix", _camera.transform);
     for (size_t i = 0; i < _regions.size(); i ++) {
         _vaos[i] -> bind();
         int idRegion = _regions[i].getId();
