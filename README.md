@@ -76,7 +76,48 @@ This will configure CMake, build the project, and run the executable (`pinn_inte
 
 For detailed dependency notes and manual CMake commands, see `interface/README.md`.
 
-## 5) Project structure
+## 5) Command Line
+
+Usual command used is:
+```
+python benchmark.py --name "<experiment_name>" --method <method> --iter <number_epochs> loss-weight "<loss1>, <loss2>, ..., <loss_n>"
+```
+Other possible argument flags are listed in the benchmark.py file. For the two electromag PDE systems, it is possible to change the spatial domain shape through the command line 'name' argument. If the experiment name contains the string 'disk', the domain will be circular, 'ellipse' is for elliptical domain and 'polygon' is for L shape domain. Below we present the command lines that generated the best results for each case.
+- Magnetic MLP Adam (same for all domain shapes):
+```
+python benchmark.py --name "mag-adam-disk" --iter 60000
+```
+- Charge Density MLP Adam (same for all domain shapes):
+```
+python benchmark.py --name "elec-adam-ellipse" --iter 40000
+```
+- Poisson MLP Adam:
+```
+python benchmark.py --name "poisson-adam" --loss-weight "0.01, 1, 1"
+```
+- Charge Density KAN LBFGS (same for all domain shapes):
+```
+python benchmark.py --name "elec-kan-polygon" --method kan --iter 400
+```
+- Burgers KAN LBFGS:
+```
+python benchmark.py --name "burgers-kan" --method kan --iter 400
+```
+- Magnetic MLP Deep Ritz ReLU (same for all domain shapes):
+```
+python benchmark.py --name "mag-ritz-disk" --method deepritz
+```
+- Charge Density MLP Deep Ritz ReLU (same for all domain shapes):
+```
+python benchmark.py --name "elec-ritz-ellipse" --method deepritz
+```
+- Charge Density KAN Deep Ritz (same for all domain shapes):
+```
+python benchmark.py --name "elec-kan-ritz-ellipse" --method kan-deepritz
+```
+For the last case in specific, the model converges much faster, but we kept the number of epochs as default (20000) to get more visualizations of the activation patterns throughout training.
+
+## 6) Project structure
 
 - `benchmark.py`: main entry to launch predefined PDE benchmarks
 - `trainer.py`: training orchestration and logging to `runs/`
