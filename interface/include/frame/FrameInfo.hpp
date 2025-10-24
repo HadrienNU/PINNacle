@@ -2,7 +2,7 @@
 #define __INFO_FRAME_HPP__
 
 
-#include <frame/ImGuiFrame.hpp>
+#include <frame/FrameImGui.hpp>
 
 #define FRAME_INFO_DEFAULT_TITLE "Information"
 #define FRAME_INFO_NO_FILE_LOADED "No files loaded"
@@ -12,10 +12,13 @@
 #define FRAME_INFO_STATISTICS "Statistics:"
 #define FRAME_INFO_REGION_COUNT "Number of regions:"
 
+#define FRAME_INFO_WIDTH 300
+#define FRAME_INFO_HEIGHT 125
 
-class FrameInfo : public ImGuiFrame {
+
+class FrameInfo : public FrameImGui {
 public:
-    FrameInfo(const String & title = FRAME_INFO_DEFAULT_TITLE, bool visible = true);
+    FrameInfo();
     void render() override;
     void setRegionCount(size_t regionCount);
     void setCurrentFile(const String & filename);

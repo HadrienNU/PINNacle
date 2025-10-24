@@ -13,7 +13,7 @@ int main() {
     std::srand(static_cast<unsigned int>(std::time(nullptr)));    
 
     FrameGL * frameGL = new FrameGL(BACKGROUND_COLOR);
-    ImGuiFrames imguiFrames(frameGL);
+    FramesImGui imguiFrames(frameGL);
     MainFrame mainFrame(WINDOW_TITLE, {WINDOW_WIDTH, WINDOW_HEIGHT}, frameGL, imguiFrames);
     std::thread watcherThread(runWatcher, "../runs");
     watcherThread.detach();

@@ -113,6 +113,7 @@ void FrameGL::resetCamera() {
     _camera.yaw = 0.0f;
     _camera.pitch = 0.0f;
     _camera.distance = DEFAULT_DISTANCE;
+    _camera.lookAt = glm::vec3(0.0f);
     updateCamera();
 }
 

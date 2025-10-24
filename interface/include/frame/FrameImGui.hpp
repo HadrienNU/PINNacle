@@ -1,16 +1,18 @@
-#ifndef __IMGUI_FRAME_HPP__
-#define __IMGUI_FRAME_HPP__
+#ifndef __FRAME_IMGUI_HPP__
+#define __FRAME_IMGUI_HPP__
 
 
 #include <imgui/imgui.h>
 #include <util.hpp>
 
+#define FRAME_IMGUI_TITLE_COLOR ImVec4(0.2f, 0.8f, 1.0f, 1.0f)
 
-class ImGuiFrame {
+
+class FrameImGui {
 public:
-    ImGuiFrame(const String & title, bool visible = true) 
+    FrameImGui(const String & title, bool visible = true) 
             : _title(title), _isVisible(visible) {}
-    virtual ~ImGuiFrame() = default;
+    virtual ~FrameImGui() = default;
     virtual void render() = 0;
     virtual bool isVisible() const { return _isVisible; }
 protected:

@@ -61,7 +61,7 @@ static void cursor_position_callback(GLFWwindow * window, double xpos, double yp
     }
 }
 
-MainFrame::MainFrame(const String & title, const Size & frameSize, FrameGL * frameGL, ImGuiFrames & imguiFrames) : 
+MainFrame::MainFrame(const String & title, const Size & frameSize, FrameGL * frameGL, FramesImGui & imguiFrames) : 
 _title(title), _frameSize(frameSize), _frameGL(frameGL), _imguiFrames(imguiFrames) {
     _event = {0, 0, 0, 0};
     init();

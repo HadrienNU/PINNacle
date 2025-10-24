@@ -2,11 +2,11 @@
 #include <algorithm>
 
 
-FrameFileSelection::FrameFileSelection(FrameGL * frameGL, std::shared_ptr<FrameInfo> frameInfo, const String & title, bool visible)
-    : ImGuiFrame(title, visible),
+FrameFileSelection::FrameFileSelection(FrameGL * frameGL, std::shared_ptr<FrameInfo> frameInfo)
+    : FrameImGui(FRAME_FILE_SELECTION_DEFAULT_TITLE, true),
       _frameInfo(frameInfo),
-      _selectedFileIndex(-1),
-      _selectedFolderIndex(0),
+      _selectedFileIndex(FRAME_FILE_SELECTION_NO_INDEX),
+      _selectedFolderIndex(FRAME_FILE_SELECTION_DEFAULT_FOLDER_INDEX),
       _frameGL(frameGL) {
     scanFolders();
     scanCSVFiles();
@@ -17,13 +17,13 @@ void FrameFileSelection::render() {
         return;
     }
 
-    ImVec2 windowSize(300, 140);
+    ImVec2 windowSize(FRAME_FILE_SELECTION_WIDTH, FRAME_FILE_SELECTION_HEIGHT);
     ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(windowSize, ImGuiCond_FirstUseEver);
     
     ImGui::Begin(_title.c_str(), &_isVisible);
 
-    ImGui::TextColored(ImVec4(0.2f, 0.8f, 1.0f, 1.0f), FRAME_FILE_SELECTION_TITLE);
+    ImGui::TextColored(FRAME_IMGUI_TITLE_COLOR, FRAME_FILE_SELECTION_TITLE);
     ImGui::Separator();
     
     renderComboBox(
@@ -33,7 +33,7 @@ void FrameFileSelection::render() {
         _selectedFolderIndex,
         FRAME_FILE_SELECTION_NO_FOLDER,
         [this](int) {
-            _selectedFileIndex = -1;
+            _selectedFileIndex = FRAME_FILE_SELECTION_NO_INDEX;
             scanCSVFiles();
         }
     );
@@ -88,13 +88,13 @@ void FrameFileSelection::scanCSVFiles() {
 
 void FrameFileSelection::scanFolders() {
     _folders.clear();
-    _folders.push_back("runs/");
+    _folders.push_back(FRAME_FILE_SELECTION_FOLDER_PREFIX);
     
     std::vector<String> subFolders;
     scanDirectory(FRAME_FILE_SELECTION_RUNS_PATH, subFolders, false);
     
     for (const auto & folder : subFolders) {
-        _folders.push_back("runs/" + folder + "/");
+        _folders.push_back(FRAME_FILE_SELECTION_FOLDER_PREFIX + folder + "/");
     }
     
     std::sort(_folders.begin(), _folders.end());

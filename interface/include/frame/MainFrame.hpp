@@ -8,7 +8,7 @@
 #include <imgui/backends/imgui_impl_glfw.h>
 #include <imgui/backends/imgui_impl_opengl3.h>
 #include <frame/FrameGL.hpp>
-#include <frame/ImGuiFrames.hpp>
+#include <frame/FramesImGui.hpp>
 
 
 struct Event {
@@ -24,7 +24,7 @@ public:
         const String & title, 
         const Size & frameSize,
         FrameGL * frameGL,
-        ImGuiFrames & imguiFrames
+        FramesImGui & imguiFrames
     );
     ~MainFrame();
     Event & event();    
@@ -40,7 +40,7 @@ private:
     String _title;
     Size _frameSize;    
     Event _event;
-    ImGuiFrames & _imguiFrames;
+    FramesImGui & _imguiFrames;
     GLFWwindow * _window;
     FrameGL * _frameGL;
 };
