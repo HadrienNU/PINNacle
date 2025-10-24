@@ -2,9 +2,9 @@
 
 
 FrameInfo::FrameInfo()
-    : FrameImGui(FRAME_INFO_TITLE, true),
-      _regionCount(FRAME_INFO_NO_REGIONS_LOADED),
-      _currentFile(FRAME_INFO_NO_FILE_LOADED) {}
+    : FrameImGui(INFO_DEFAULT_TITLE, true),
+      _regionCount(INFO_DEFAULT_REGION_COUNT),
+      _currentFile(INFO_NO_FILE_LOADED) {}
 
 void FrameInfo::render() {
     if (!_isVisible) {
@@ -12,24 +12,24 @@ void FrameInfo::render() {
     }
 
     ImGuiIO & io = ImGui::GetIO();
-    ImVec2 windowSize(FRAME_INFO_WIDTH, FRAME_INFO_HEIGHT);
+    ImVec2 windowSize(INFO_WINDOW_WIDTH, INFO_WINDOW_HEIGHT);
     ImGui::SetNextWindowSize(windowSize, ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x - windowSize.x, 0), ImGuiCond_Always);
     
     ImGui::Begin(_title.c_str(), &_isVisible);
 
-    ImGui::TextColored(FRAME_IMGUI_TITLE_COLOR, FRAME_INFO_TITLE);
+    ImGui::TextColored(IMGUI_TITLE_COLOR, INFO_TITLE);
     ImGui::Separator();
 
-    ImGui::Text(FRAME_INFO_CURRENT_FILE);
+    ImGui::Text(INFO_CURRENT_FILE_LABEL);
     ImGui::Indent();
     ImGui::Text("%s", _currentFile.c_str());
     ImGui::Unindent();
     ImGui::Separator();
 
-    ImGui::Text(FRAME_INFO_STATISTICS);
+    ImGui::Text(INFO_STATISTICS_LABEL);
     ImGui::Indent();
-    ImGui::Text("%s %zu", FRAME_INFO_REGION_COUNT, _regionCount);
+    ImGui::Text("%s %zu", INFO_REGION_COUNT_LABEL, _regionCount);
     ImGui::Unindent();
 
     ImGui::End();

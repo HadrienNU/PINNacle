@@ -3,10 +3,10 @@
 
 
 FrameFileSelection::FrameFileSelection(FrameGL * frameGL, std::shared_ptr<FrameInfo> frameInfo)
-    : FrameImGui(FRAME_FILE_SELECTION_DEFAULT_TITLE, true),
+    : FrameImGui(FILE_SELECTION_DEFAULT_TITLE, true),
       _frameInfo(frameInfo),
-      _selectedFileIndex(FRAME_FILE_SELECTION_NO_INDEX),
-      _selectedFolderIndex(FRAME_FILE_SELECTION_DEFAULT_FOLDER_INDEX),
+      _selectedFileIndex(FILE_SELECTION_NO_INDEX),
+      _selectedFolderIndex(FILE_SELECTION_DEFAULT_FOLDER_INDEX),
       _frameGL(frameGL) {
     scanFolders();
     scanCSVFiles();
@@ -17,23 +17,23 @@ void FrameFileSelection::render() {
         return;
     }
 
-    ImVec2 windowSize(FRAME_FILE_SELECTION_WIDTH, FRAME_FILE_SELECTION_HEIGHT);
+    ImVec2 windowSize(FILE_SELECTION_WINDOW_WIDTH, FILE_SELECTION_WINDOW_HEIGHT);
     ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(windowSize, ImGuiCond_FirstUseEver);
     
     ImGui::Begin(_title.c_str(), &_isVisible);
 
-    ImGui::TextColored(FRAME_IMGUI_TITLE_COLOR, FRAME_FILE_SELECTION_TITLE);
+    ImGui::TextColored(IMGUI_TITLE_COLOR, FILE_SELECTION_TITLE);
     ImGui::Separator();
     
     renderComboBox(
-        FRAME_FILE_SELECTION_FOLDER_LABEL,
+        FILE_SELECTION_FOLDER_LABEL,
         "##foldercombo",
         _folders,
         _selectedFolderIndex,
-        FRAME_FILE_SELECTION_NO_FOLDER,
+        FILE_SELECTION_NO_FOLDER,
         [this](int) {
-            _selectedFileIndex = FRAME_FILE_SELECTION_NO_INDEX;
+            _selectedFileIndex = FILE_SELECTION_NO_INDEX;
             scanCSVFiles();
         }
     );
@@ -41,11 +41,11 @@ void FrameFileSelection::render() {
     ImGui::Spacing();
     
     renderComboBox(
-        FRAME_FILE_SELECTION_LABEL,
+        FILE_SELECTION_FILE_LABEL,
         "##csvcombo",
         _csvFiles,
         _selectedFileIndex,
-        FRAME_FILE_SELECTION_NO_FILE,
+        FILE_SELECTION_NO_FILE,
         [this](int index) {
             loadFile(_csvFiles[index]);
         }
@@ -88,13 +88,13 @@ void FrameFileSelection::scanCSVFiles() {
 
 void FrameFileSelection::scanFolders() {
     _folders.clear();
-    _folders.push_back(FRAME_FILE_SELECTION_FOLDER_PREFIX);
+    _folders.push_back(FILE_SELECTION_FOLDER_PREFIX);
     
     std::vector<String> subFolders;
-    scanDirectory(FRAME_FILE_SELECTION_RUNS_PATH, subFolders, false);
+    scanDirectory(FILE_SELECTION_RUNS_PATH, subFolders, false);
     
     for (const auto & folder : subFolders) {
-        _folders.push_back(FRAME_FILE_SELECTION_FOLDER_PREFIX + folder + "/");
+        _folders.push_back(FILE_SELECTION_FOLDER_PREFIX + folder + "/");
     }
     
     std::sort(_folders.begin(), _folders.end());
@@ -150,7 +150,7 @@ String FrameFileSelection::getCurrentFolderPath() const {
     if (isValidFolder) {
         return "../" + _folders[_selectedFolderIndex];
     }
-    return FRAME_FILE_SELECTION_RUNS_PATH;
+    return FILE_SELECTION_RUNS_PATH;
 }
 
 void FrameFileSelection::selectPreviousFile() {

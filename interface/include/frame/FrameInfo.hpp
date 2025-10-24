@@ -4,16 +4,18 @@
 
 #include <frame/FrameImGui.hpp>
 
-#define FRAME_INFO_DEFAULT_TITLE "Information"
-#define FRAME_INFO_NO_FILE_LOADED "No files loaded"
-#define FRAME_INFO_NO_REGIONS_LOADED 0
-#define FRAME_INFO_TITLE "PINNacle - Visualization Interface"
-#define FRAME_INFO_CURRENT_FILE "Current file:"
-#define FRAME_INFO_STATISTICS "Statistics:"
-#define FRAME_INFO_REGION_COUNT "Number of regions:"
+#define INFO_DEFAULT_TITLE "Information"
+#define INFO_TITLE "PINNacle - Visualization Interface"
 
-#define FRAME_INFO_WIDTH 300
-#define FRAME_INFO_HEIGHT 125
+#define INFO_CURRENT_FILE_LABEL "Current file:"
+#define INFO_NO_FILE_LOADED "No files loaded"
+
+#define INFO_STATISTICS_LABEL "Statistics:"
+#define INFO_REGION_COUNT_LABEL "Number of regions:"
+#define INFO_DEFAULT_REGION_COUNT 0
+
+#define INFO_WINDOW_WIDTH 300.0f
+#define INFO_WINDOW_HEIGHT 125.0f
 
 
 class FrameInfo : public FrameImGui {

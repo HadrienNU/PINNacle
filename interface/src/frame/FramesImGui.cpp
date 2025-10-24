@@ -8,6 +8,7 @@ FramesImGui::FramesImGui(FrameGL * frameGL) {
     _imguiFrames.push_back(frameInfo);
     _imguiFrames.push_back(std::make_shared<FrameFileSelection>(frameGL, frameInfo));
     _imguiFrames.push_back(std::make_shared<FrameResetCamera>(frameGL));
+    _imguiFrames.push_back(std::make_shared<FrameSettings>(frameGL));
 }
 
 void FramesImGui::render() {

@@ -10,20 +10,23 @@
 #include <filesystem>
 #include <functional>
 
-#define FRAME_FILE_SELECTION_DEFAULT_TITLE "File Selection"
-#define FRAME_FILE_SELECTION_RUNS_PATH "../runs/"
-#define FRAME_FILE_SELECTION_FOLDER_PREFIX "runs/"
-#define FRAME_FILE_SELECTION_TITLE "Select CSV File"
-#define FRAME_FILE_SELECTION_LABEL "CSV File:"
-#define FRAME_FILE_SELECTION_NO_FILE "No file selected"
-#define FRAME_FILE_SELECTION_FOLDER_LABEL "Folder:"
-#define FRAME_FILE_SELECTION_NO_FOLDER "No folder selected"
+#define FILE_SELECTION_DEFAULT_TITLE "File Selection"
+#define FILE_SELECTION_TITLE "Select CSV File"
 
-#define FRAME_FILE_SELECTION_WIDTH 300
-#define FRAME_FILE_SELECTION_HEIGHT 140
+#define FILE_SELECTION_FOLDER_LABEL "Folder:"
+#define FILE_SELECTION_NO_FOLDER "No folder selected"
 
-#define FRAME_FILE_SELECTION_NO_INDEX -1
-#define FRAME_FILE_SELECTION_DEFAULT_FOLDER_INDEX 0
+#define FILE_SELECTION_FILE_LABEL "CSV File:"
+#define FILE_SELECTION_NO_FILE "No file selected"
+
+#define FILE_SELECTION_RUNS_PATH "../runs/"
+#define FILE_SELECTION_FOLDER_PREFIX "runs/"
+
+#define FILE_SELECTION_WINDOW_WIDTH 300.0f
+#define FILE_SELECTION_WINDOW_HEIGHT 140.0f
+
+#define FILE_SELECTION_NO_INDEX -1
+#define FILE_SELECTION_DEFAULT_FOLDER_INDEX 0
 
 
 class FrameFileSelection : public FrameImGui {

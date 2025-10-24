@@ -5,8 +5,7 @@
 #include <imgui/imgui.h>
 #include <util.hpp>
 
-#define FRAME_IMGUI_TITLE_COLOR ImVec4(0.2f, 0.8f, 1.0f, 1.0f)
-
+#define IMGUI_TITLE_COLOR ImVec4(0.2f, 0.8f, 1.0f, 1.0f)
 
 class FrameImGui {
 public:
