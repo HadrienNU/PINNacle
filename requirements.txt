@@ -10,5 +10,6 @@ scikit-fem
 tqdm
 adaptmesh
 shapely
+trimesh
 
 torch
