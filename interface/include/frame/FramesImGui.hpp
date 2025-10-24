@@ -6,7 +6,7 @@
 #include <frame/FrameImGui.hpp>
 #include <frame/FrameInfo.hpp>
 #include <frame/FrameFileSelection.hpp>
-#include <frame/FrameResetCamera.hpp>
+#include <frame/FrameCenterCamera.hpp>
 #include <frame/FrameSettings.hpp>
 #include <vector>
 #include <memory>

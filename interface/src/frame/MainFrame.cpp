@@ -55,9 +55,9 @@ static void cursor_position_callback(GLFWwindow * window, double xpos, double yp
     event.mousePositionY = ypos;
 
     if (event.leftButtonPressed) {
-        frame -> rotateCamera(dx, dy);
-    } else if (event.rightButtonPressed) {
         frame -> translateCamera(dx, dy);
+    } else if (event.rightButtonPressed) {
+        frame -> rotateCamera(dx, dy);
     }
 }
 

@@ -1,4 +1,4 @@
-#include <frame/FrameResetCamera.hpp>
+#include <frame/FrameCenterCamera.hpp>
 
 
 FrameResetCamera::FrameResetCamera(FrameGL * frameGL) 

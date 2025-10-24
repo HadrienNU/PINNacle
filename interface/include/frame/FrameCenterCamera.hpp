@@ -7,7 +7,7 @@
 
 #define RESET_CAMERA_BUTTON_WIDTH 120.0f
 #define RESET_CAMERA_BUTTON_HEIGHT 50.0f
-#define RESET_CAMERA_BUTTON_TEXT "Reset"
+#define RESET_CAMERA_BUTTON_TEXT "Center"
 
 
 class FrameResetCamera : public FrameImGui {
