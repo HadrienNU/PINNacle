@@ -11,6 +11,13 @@
 #include <frame/ImGuiFrames.hpp>
 
 
+struct Event {
+    double mousePositionX;
+    double mousePositionY;
+    bool rightButtonPressed;
+    bool leftButtonPressed;
+};
+
 class MainFrame {
 public:
     MainFrame(
@@ -19,19 +26,23 @@ public:
         FrameGL * frameGL,
         ImGuiFrames & imguiFrames
     );
-    ~MainFrame();    
+    ~MainFrame();
+    Event & event();    
     void resize(const Size & frameSize);
+    void scaleCamera(float delta);
+    void translateCamera(float deltaX, float deltaY);
+    void rotateCamera(float deltaYaw, float deltaPitch);
     void run();
-    FrameGL* getFrameGL() const { return _frameGL; }
 private:
     void init();
     void initImGUI();
 private:
     String _title;
-    Size _frameSize;
+    Size _frameSize;    
+    Event _event;
+    ImGuiFrames & _imguiFrames;
     GLFWwindow * _window;
     FrameGL * _frameGL;
-    ImGuiFrames & _imguiFrames;
 };
 
 #endif

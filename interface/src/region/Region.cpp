@@ -1,6 +1,6 @@
 #include <region/Region.hpp>
 
-Region::Region() {}
+Region::Region(int id) : _id(id) {}
 
 void Region::addPoint(const glm::vec2 & point) {
     addPoint(glm::vec3(point, 0.0f));

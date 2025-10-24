@@ -6,51 +6,64 @@ static void error_callback(int error, const char * description) {
 }
 
 static void framebuffer_size_callback(GLFWwindow * window, int width, int height) {
-    MainFrame * frame = static_cast<MainFrame*>(glfwGetWindowUserPointer(window));
+    MainFrame * frame = static_cast<MainFrame *>(glfwGetWindowUserPointer(window));
     if (!frame) {
         return;
     }
     frame -> resize({width, height});
 }
 
-static void scroll_callback(GLFWwindow *window, double xoffset, double yoffset) {
-    MainFrame *frame = static_cast<MainFrame *>(glfwGetWindowUserPointer(window));
-    if (!frame || !frame->getFrameGL()) {
+static void scroll_callback(GLFWwindow * window, double, double yoffset) {
+    MainFrame * frame = static_cast<MainFrame *>(glfwGetWindowUserPointer(window));
+    if (!frame) {
         return;
     }
-    frame->getFrameGL()->zoom(static_cast<float>(yoffset));
+    frame -> scaleCamera(static_cast<float>(yoffset));
 }
 
-static bool rightMousePressed = false;
-static double lastX = 0.0, lastY = 0.0;
-static void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
+static void mouse_button_callback(GLFWwindow * window, int button, int action, int) {
+    MainFrame * frame = static_cast<MainFrame *>(glfwGetWindowUserPointer(window));
+    if (!frame) {
+        return;
+    }
+
+    Event & event = frame -> event();
     if (button == GLFW_MOUSE_BUTTON_RIGHT) {
-        rightMousePressed = (action == GLFW_PRESS);
-        if (rightMousePressed) {
-            glfwGetCursorPos(window, &lastX, &lastY);
-        }
-    }
+        event.rightButtonPressed = (action == GLFW_PRESS);
+    }       
+
+    if (button == GLFW_MOUSE_BUTTON_LEFT) {
+        event.leftButtonPressed = (action == GLFW_PRESS);
+    }        
+
+    if (action == GLFW_PRESS) {
+        glfwGetCursorPos(window, &event.mousePositionX, &event.mousePositionY);
+    }        
 }
 
-static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
-    if (!rightMousePressed)
+
+static void cursor_position_callback(GLFWwindow * window, double xpos, double ypos) {
+    MainFrame * frame = static_cast<MainFrame *>(glfwGetWindowUserPointer(window));
+    if (!frame) {
         return;
+    }
 
-    double deltaX = xpos - lastX;
-    double deltaY = ypos - lastY;
+    Event & event = frame -> event();
+    float dx = (float)(event.mousePositionX - xpos);
+    float dy = (float)(event.mousePositionY - ypos);
+    event.mousePositionX = xpos;
+    event.mousePositionY = ypos;
 
-    lastX = xpos;
-    lastY = ypos;
-
-    MainFrame* frame = static_cast<MainFrame*>(glfwGetWindowUserPointer(window));
-    if (frame && frame->getFrameGL()) {
-        frame->getFrameGL()->translateCamera((float)deltaX, (float)deltaY);
+    if (event.leftButtonPressed) {
+        frame -> rotateCamera(dx, dy);
+    } else if (event.rightButtonPressed) {
+        frame -> translateCamera(dx, dy);
     }
 }
-
 
 MainFrame::MainFrame(const String & title, const Size & frameSize, FrameGL * frameGL, ImGuiFrames & imguiFrames) : 
 _title(title), _frameSize(frameSize), _frameGL(frameGL), _imguiFrames(imguiFrames) {
+    _event = {0, 0, 0, 0};
     init();
 }
 
@@ -62,10 +75,26 @@ MainFrame::~MainFrame() {
     glfwTerminate();    
 }
 
+Event & MainFrame::event() {
+    return _event;
+}
+
 void MainFrame::resize(const Size & frameSize) {
     _frameSize = frameSize;
     _frameGL -> resize(_frameSize);
     glViewport(0, 0, frameSize.width, frameSize.height);
+}
+
+void MainFrame::scaleCamera(float delta) {
+    _frameGL -> scaleCamera(delta);
+}
+
+void MainFrame::translateCamera(float deltaX, float deltaY) {
+    _frameGL -> translateCamera(deltaX, deltaY);
+}
+
+void MainFrame::rotateCamera(float deltaYaw, float deltaPitch) {
+    _frameGL -> rotateCamera(deltaYaw, deltaPitch);
 }
 
 void MainFrame::init() {
@@ -94,7 +123,7 @@ void MainFrame::init() {
     
     glfwMakeContextCurrent(_window);
     gladLoadGL();
-    glfwSwapInterval(1); // vsync
+    glfwSwapInterval(1);
 
     int fbW, fbH;
     glfwSetWindowUserPointer(_window, this);
@@ -123,6 +152,7 @@ void MainFrame::run() {
 
         _imguiFrames.render();
         _frameGL -> render();
+        
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         
         glfwSwapBuffers(_window);

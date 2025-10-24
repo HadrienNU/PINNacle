@@ -88,6 +88,7 @@ if __name__ == "__main__":
     date_str = time.strftime('%m.%d-%H.%M.%S', time.localtime())
     trainer = Trainer(f"{date_str}-{command_args.name}", command_args.device)
 
+
     for pde_config in pde_list:
 
         def get_model_dde():
@@ -187,7 +188,7 @@ if __name__ == "__main__":
                     #TesterCallback(log_every=command_args.log_every),
                     #PlotCallback(log_every=command_args.plot_every, fast=True),
                     #LossCallback(verbose=True),
-                    InterfaceCallback(log_every=command_args.log_every),
+                    InterfaceCallback(date=date_str, log_every=command_args.log_every),
                 ]
             }
         )

@@ -5,6 +5,7 @@
 #include <glad/glad.h>
 #include <vector>
 #include <iostream>
+#include <unordered_map>
 #include <fstream>
 #include <sstream>
 #include <regex>
@@ -17,7 +18,10 @@ struct Size {
 };
 
 struct Color {
-    unsigned char r, g, b;
+    unsigned char r = 0;
+    unsigned char g = 0;
+    unsigned char b = 0;
+    Color() {}
     Color(unsigned char red, unsigned char green, unsigned char blue);
 };
 
@@ -26,15 +30,12 @@ struct ColorGL {
     ColorGL(const Color& color, GLfloat alpha = 1.0f);
 };
 
-typedef std::vector<Color> TableColor;
+typedef std::unordered_map<int, Color> TableColor;
 typedef std::string String;
 
 void error(const String & errorMessage);
 
 Color generateRandomColor();
-
-TableColor generateTableColor(size_t tableColorSize);
-void resizeTableColor(TableColor & tableColor, size_t size);
 
 bool naturalSort(const String & a, const String & b);
 

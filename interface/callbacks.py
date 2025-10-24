@@ -6,7 +6,7 @@ import torch
 
 class InterfaceCallback(Callback):
 
-    def __init__(self, log_every=None):
+    def __init__(self, date, log_every=None):
         super(InterfaceCallback, self).__init__()
         self.log_every = log_every
         self.resolution = 500
@@ -15,6 +15,7 @@ class InterfaceCallback(Callback):
         self.input_storage = []
         self.map_regions_id = {}
         self.nb_regions = 0
+        self.date = date
 
     def evaluate_regions(self):
         self.activation_storage.clear()
@@ -76,6 +77,7 @@ class InterfaceCallback(Callback):
             return 
 
         self.evaluate_regions()
+        self.activation_storage.pop()
         activation_pattern = torch.cat(self.activation_storage, dim=1) 
         map_region = {}
 

@@ -19,7 +19,7 @@ Regions RegionReader::read() const {
     }
 
     String line;
-    Region currentRegion;
+    Region currentRegion(-1); // This region does not exist
     int currentIdRegion = -1;
     bool header = true;
     while (std::getline(regionFile, line)) {
@@ -41,11 +41,12 @@ Regions RegionReader::read() const {
         /* Changing region */
         if (currentIdRegion == -1) {
             currentIdRegion = std::stoi(idRegion);
+            currentRegion = Region(currentIdRegion);
         }
         if (std::stoi(idRegion) != currentIdRegion) {
             currentIdRegion = std::stoi(idRegion);
             regions.push_back(currentRegion);
-            currentRegion = Region();
+            currentRegion = Region(currentIdRegion);
         }
     }
 
