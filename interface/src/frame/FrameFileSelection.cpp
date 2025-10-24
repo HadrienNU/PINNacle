@@ -50,6 +50,17 @@ void FrameFileSelection::render() {
             loadFile(_csvFiles[index]);
         }
     );
+    
+    ImGui::SameLine();
+    ImGui::BeginDisabled(_csvFiles.empty());
+    if (ImGui::ArrowButton("##leftfile", ImGuiDir_Left)) {
+        selectPreviousFile();
+    }
+    ImGui::SameLine();
+    if (ImGui::ArrowButton("##rightfile", ImGuiDir_Right)) {
+        selectNextFile();
+    }
+    ImGui::EndDisabled();
 
     ImGui::End();
 }
@@ -72,6 +83,7 @@ void FrameFileSelection::loadFile(const String& filename) {
 void FrameFileSelection::scanCSVFiles() {
     _csvFiles.clear();
     scanDirectory(getCurrentFolderPath(), _csvFiles, true, ".csv");
+    std::sort(_csvFiles.begin(), _csvFiles.end(), naturalSort);
 }
 
 void FrameFileSelection::scanFolders() {
@@ -104,8 +116,6 @@ void FrameFileSelection::scanDirectory(const String & path, std::vector<String> 
                 results.push_back(entry.path().filename().string());
             }
         }
-
-        std::sort(results.begin(), results.end());
     } catch (const std::filesystem::filesystem_error& e) {
         std::cerr << "Error scanning directory '" << path << "': " << e.what() << std::endl;
     }
@@ -143,3 +153,40 @@ String FrameFileSelection::getCurrentFolderPath() const {
     return FRAME_FILE_SELECTION_RUNS_PATH;
 }
 
+void FrameFileSelection::selectPreviousFile() {
+    if (_csvFiles.empty()) {
+        return;
+    }
+
+    bool notFileSelected = _selectedFileIndex < 0;
+    bool isFirstFileSelected = _selectedFileIndex == 0;
+    if (notFileSelected || isFirstFileSelected) {
+        _selectedFileIndex = static_cast<int>(_csvFiles.size()) - 1;
+    } else {
+        _selectedFileIndex--;
+    }
+
+    bool isValidFileIndex = _selectedFileIndex >= 0 && _selectedFileIndex < static_cast<int>(_csvFiles.size());
+    if (isValidFileIndex) {
+        loadFile(_csvFiles[_selectedFileIndex]);
+    }
+}
+
+void FrameFileSelection::selectNextFile() {
+    if (_csvFiles.empty()) {
+        return;
+    }
+
+    bool notFileSelected = _selectedFileIndex < 0;
+    bool isLastFileSelected = _selectedFileIndex >= static_cast<int>(_csvFiles.size()) - 1;
+    if (notFileSelected || isLastFileSelected) {
+        _selectedFileIndex = 0;
+    } else {
+        _selectedFileIndex++;
+    }
+
+    bool isValidFileIndex = _selectedFileIndex >= 0 && _selectedFileIndex < static_cast<int>(_csvFiles.size());
+    if (isValidFileIndex) {
+        loadFile(_csvFiles[_selectedFileIndex]);
+    }
+}

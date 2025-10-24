@@ -43,3 +43,29 @@ void resizeTableColor(TableColor& tableColor, size_t size) {
     }
 }
 
+bool naturalSort(const String & a, const String & b) {
+    std::regex re("(\\d+)|(\\D+)");
+    std::sregex_token_iterator it_a(a.begin(), a.end(), re), it_b(b.begin(), b.end(), re);
+    std::sregex_token_iterator end;
+
+    while (it_a != end && it_b != end) {
+        String token_a = *it_a++;
+        String token_b = *it_b++;
+
+        if (!token_a.empty() && !token_b.empty() && 
+            std::isdigit(token_a[0]) && std::isdigit(token_b[0])) {
+            int num_a = std::stoi(token_a);
+            int num_b = std::stoi(token_b);
+            if (num_a != num_b) {
+                return num_a < num_b;
+            }
+        } else {
+            if (token_a != token_b) {
+                return token_a < token_b;
+            }
+        }
+    }
+
+    return a.size() < b.size();
+}
+

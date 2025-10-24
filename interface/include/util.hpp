@@ -7,6 +7,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <regex>
 #include <glm/glm.hpp>
 
 
@@ -34,6 +35,8 @@ Color generateRandomColor();
 
 TableColor generateTableColor(size_t tableColorSize);
 void resizeTableColor(TableColor & tableColor, size_t size);
+
+bool naturalSort(const String & a, const String & b);
 
 #endif
 
