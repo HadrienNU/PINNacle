@@ -19,10 +19,19 @@ class InterfaceCallback(Callback):
     def evaluate_regions(self):
         self.activation_storage.clear()
         self.input_storage.clear()
-        x_range = torch.linspace(self.model.pde.bbox[0], self.model.pde.bbox[1], self.resolution)
-        y_range = torch.linspace(self.model.pde.bbox[2], self.model.pde.bbox[3], self.resolution)
-        xx, yy = torch.meshgrid(x_range, y_range, indexing='ij')
-        grid_points = torch.stack([xx.reshape(-1), yy.reshape(-1)], dim=1)
+        dim = self.model.pde.geom.dim
+        if dim == 2:
+            x_range = torch.linspace(self.model.pde.bbox[0], self.model.pde.bbox[1], self.resolution)
+            y_range = torch.linspace(self.model.pde.bbox[2], self.model.pde.bbox[3], self.resolution)
+            xx, yy = torch.meshgrid(x_range, y_range, indexing='ij')
+            grid_points = torch.stack([xx.reshape(-1), yy.reshape(-1)], dim=1)
+        elif dim == 3:
+            self.resolution = 100  # Reduce resolution for 3D to limit memory usage
+            x_range = torch.linspace(self.model.pde.bbox[0], self.model.pde.bbox[1], self.resolution)
+            y_range = torch.linspace(self.model.pde.bbox[2], self.model.pde.bbox[3], self.resolution)
+            z_range = torch.linspace(self.model.pde.bbox[4], self.model.pde.bbox[5], self.resolution)
+            xx, yy, zz = torch.meshgrid(x_range, y_range, z_range, indexing='ij')
+            grid_points = torch.stack([xx.reshape(-1), yy.reshape(-1), zz.reshape(-1)], dim=1)
         inside_mask = self.model.pde.geom.inside(grid_points.cpu().numpy())
         valid_points = grid_points[inside_mask]
         _ = self.model.predict(valid_points.cpu().numpy())
@@ -83,12 +92,22 @@ class InterfaceCallback(Callback):
                 map_region[id_region] = [input_point]                
 
         geom = self.model.pde.geom
-        regions = Regions(
-            map_region,
-            (geom.center[0], geom.center[1]),
-            geom.radius,
-            self.resolution
-        )
+        if geom.dim == 2:
+            regions = Regions(
+                map_region,
+                (geom.center[0], geom.center[1]),
+                geom.radius,
+                self.resolution,
+                dim=2
+            )
+        elif geom.dim == 3:
+            regions = Regions(
+                map_region,
+                (geom.center[0], geom.center[1], geom.center[2]),
+                geom.radius,
+                self.resolution,
+                dim=3
+            )
         regions.export(f"epoch{self.epoch}")
 
     def on_batch_begin(self):

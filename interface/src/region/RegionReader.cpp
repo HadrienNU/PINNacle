@@ -28,13 +28,14 @@ Regions RegionReader::read() const {
             continue;
         }
         std::stringstream ss(line);
-        String x, y, idRegion;
+        String x, y, z, idRegion;
 
         std::getline(ss, x, ',');
         std::getline(ss, y, ',');
+        std::getline(ss, z, ',');
         std::getline(ss, idRegion, ',');
 
-        glm::vec2 point(std::stof(x), std::stof(y));
+        glm::vec3 point(std::stof(x), std::stof(y), std::stof(z));
         currentRegion.addPoint(point);
 
         /* Changing region */
