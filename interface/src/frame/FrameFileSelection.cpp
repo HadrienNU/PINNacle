@@ -17,9 +17,11 @@ void FrameFileSelection::render() {
         return;
     }
 
-    ImVec2 windowSize(FILE_SELECTION_WINDOW_WIDTH, FILE_SELECTION_WINDOW_HEIGHT);
-    ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(windowSize, ImGuiCond_FirstUseEver);
+    ImGuiIO & io = ImGui::GetIO();
+    float scale = io.FontGlobalScale;
+    ImVec2 windowSize(FILE_SELECTION_WINDOW_WIDTH * scale, FILE_SELECTION_WINDOW_HEIGHT * scale);
+    ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(windowSize, ImGuiCond_Always);
     
     ImGui::Begin(_title.c_str(), &_isVisible);
 

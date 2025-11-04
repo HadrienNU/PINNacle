@@ -10,7 +10,8 @@ void FrameResetCamera::render() {
     }
 
     ImGuiIO & io = ImGui::GetIO();
-    ImVec2 windowSize(RESET_CAMERA_BUTTON_WIDTH, RESET_CAMERA_BUTTON_HEIGHT);
+    float scale = io.FontGlobalScale;
+    ImVec2 windowSize(RESET_CAMERA_BUTTON_WIDTH * scale, RESET_CAMERA_BUTTON_HEIGHT * scale);
     ImVec2 windowPos(
         io.DisplaySize.x - windowSize.x,
         io.DisplaySize.y - windowSize.y

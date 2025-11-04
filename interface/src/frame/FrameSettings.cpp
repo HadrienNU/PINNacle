@@ -13,7 +13,8 @@ void FrameSettings::render() {
     }
 
     ImGuiIO & io = ImGui::GetIO();
-    ImVec2 buttonSize(SETTINGS_BUTTON_WIDTH, SETTINGS_BUTTON_HEIGHT);
+    float scale = io.FontGlobalScale;
+    ImVec2 buttonSize(SETTINGS_BUTTON_WIDTH * scale, SETTINGS_BUTTON_HEIGHT * scale);
     ImVec2 buttonPos(0, io.DisplaySize.y - buttonSize.y);
     ImGui::SetNextWindowPos(buttonPos, ImGuiCond_Always);
     ImGui::SetNextWindowSize(buttonSize, ImGuiCond_Always);
@@ -35,14 +36,14 @@ void FrameSettings::render() {
     ImGui::End();
 
     if (_settingsWindowOpen) {
-        ImVec2 windowSize(SETTINGS_WINDOW_WIDTH, SETTINGS_WINDOW_HEIGHT);
+        ImVec2 windowSize(SETTINGS_WINDOW_WIDTH * scale, SETTINGS_WINDOW_HEIGHT * scale);
         ImVec2 windowPos(
             (io.DisplaySize.x - windowSize.x) * SETTINGS_WINDOW_CENTER_X,
             (io.DisplaySize.y - windowSize.y) * SETTINGS_WINDOW_CENTER_Y
         );
 
-        ImGui::SetNextWindowPos(windowPos, ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSize(windowSize, ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowPos(windowPos, ImGuiCond_Always);
+        ImGui::SetNextWindowSize(windowSize, ImGuiCond_Always);
 
         ImGui::Begin(SETTINGS_WINDOW_TITLE, &_settingsWindowOpen, ImGuiWindowFlags_NoCollapse);
 
@@ -53,7 +54,7 @@ void FrameSettings::render() {
         ImGui::Text(SETTINGS_FONT_SCALE_LABEL);
         ImGui::Spacing();
     
-        float buttonWidth = SETTINGS_RESET_BUTTON_WIDTH;
+        float buttonWidth = SETTINGS_RESET_BUTTON_WIDTH * scale;
         float spacing = ImGui::GetStyle().ItemSpacing.x;
         float availableWidth = ImGui::GetContentRegionAvail().x;
         float sliderWidth = availableWidth - buttonWidth - spacing;
