@@ -1,5 +1,6 @@
 import numpy as np
 from shapely.geometry import Polygon, LineString, Point
+from shapely.affinity import scale
 from scipy.spatial import ConvexHull
 import trimesh
 import csv
@@ -55,6 +56,7 @@ class Regions:
                     poly = Polygon(points[hull.vertices])
                 except Exception:
                     poly = Polygon(points)
+                poly = scale(poly, xfact=1000.0, yfact=1000.0, origin='center')
             
             elif n == 2:
                 line = LineString(points)
@@ -64,7 +66,8 @@ class Regions:
                 x, y = points[0]
                 poly = Point(x, y).buffer(pixel_size * 0.5, resolution=16)
 
-            clipped = poly.intersection(circle)
+            #clipped = poly.intersection(circle)
+            clipped = poly
             if not clipped.is_empty and isinstance(clipped, (Polygon, LineString)):
                 if isinstance(clipped, Polygon):
                     coords = np.array(clipped.exterior.coords)
