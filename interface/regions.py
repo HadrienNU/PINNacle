@@ -66,7 +66,6 @@ class Regions:
 
             clipped = poly.intersection(circle)
             if not clipped.is_empty and isinstance(clipped, (Polygon, LineString)):
-                # On n’exporte que les coordonnées de la frontière
                 if isinstance(clipped, Polygon):
                     coords = np.array(clipped.exterior.coords)
                 else:  # LineString

@@ -8,14 +8,110 @@ class InterfaceCallback(Callback):
 
     def __init__(self, date, log_every=None):
         super(InterfaceCallback, self).__init__()
-        self.log_every = log_every
-        self.resolution = 500
-        self.epoch = 0
+        self.log_every = log_every        
+        self.date = date     
+        self.epoch = 0   
+
+    def register_ready(self):
+        return self.epoch % self.log_every == 0     
+
+    def on_epoch_begin(self):
+        """Called at the beginning of every epoch."""
+
+    def on_epoch_end(self):
+        """Called at the end of every epoch."""
+        self.epoch += 1
+        if not self.register_ready():   
+            return 
+        self.activation_region.export_regions(self.epoch, self.date)        
+
+    def on_batch_begin(self):
+        """Called at the beginning of every batch."""
+        pass
+
+    def on_batch_end(self):
+        """Called at the end of every batch."""
+        pass
+
+    def on_train_begin(self):
+        if self.log_every is None:
+            self.log_every = self.model.display_every
+        self.activation_region = ActivationRegionStrategy(self.model, self.register_ready)
+        self.activation_region.register_hook()
+
+    def on_train_end(self):
+        """Called at the end of model training."""
+        pass
+
+    def on_predict_begin(self):
+        """Called at the beginning of prediction."""
+        pass
+
+    def on_predict_end(self):
+        """Called at the end of prediction."""
+        pass
+
+
+class ActivationRegionStrategy:
+
+    def __init__(self, model, register_ready):
+        self.model = model
+        self.register_ready = register_ready
         self.activation_storage = []
         self.input_storage = []
-        self.map_regions_id = {}
+        self.map_regions_id = {}                
         self.nb_regions = 0
-        self.date = date
+        self.resolution = 500
+        self.init_strategy()        
+
+    def init_strategy(self):
+        self.activations_output = {
+            "tanh": self.tanh_output,
+            "relu": self.relu_output
+        }
+        self.activations_pattern = {
+            "tanh": self.tanh_pattern,
+            "relu": self.relu_pattern
+        }
+
+    def get_activation_output(self):
+        return self.activations_output[self.activation_name.lower()]
+    
+    def get_activation_pattern(self):
+        return self.activations_pattern[self.activation_name.lower()]()
+    
+    def get_activation_hook(self):
+        activation_output = self.get_activation_output()
+        def get_hook(module, input, output):
+            if self.register_ready():
+                self.activation_storage.append(activation_output(output).cpu())
+        return get_hook
+    
+    def get_input(self):
+        def get_hook(module, input):
+            if self.register_ready():
+                self.input_storage.append(input[0].cpu())
+        return get_hook
+
+    def tanh_output(self, output):
+        return torch.tanh(output)
+
+    def relu_output(self, output):
+        return (output > 0).int()   
+
+    def register_hook(self):
+        self.model.net.register_forward_pre_hook(self.get_input())
+        self.activation_name = self.model.net.activation.__name__
+        get_hook = self.get_activation_hook()
+        for module in self.model.net.modules():   
+            if isinstance(module, torch.nn.modules.linear.Linear):
+                module.register_forward_hook(get_hook)
+
+    def tanh_pattern(self):
+        pass
+
+    def relu_pattern(self):
+        return torch.cat(self.activation_storage, dim=1) 
 
     def evaluate_regions(self):
         self.activation_storage.clear()
@@ -37,48 +133,11 @@ class InterfaceCallback(Callback):
         valid_points = grid_points[inside_mask]
         _ = self.model.predict(valid_points.cpu().numpy())
 
-    def register_ready(self):
-        return self.epoch % self.log_every == 0
-
-    def get_input(self):
-        def get_hook(module, input):
-            if self.register_ready():
-                self.input_storage.append(input[0].cpu())
-        return get_hook
-    
-    def get_activation_hook(self, activation_name):
-        activations_output = {
-            "tanh": self.tanh_output,
-            "relu": self.relu_output
-        }
-
-        activation_output = activations_output[activation_name.lower()]
-        def get_hook(module, input, output):
-            if self.register_ready():
-                self.activation_storage.append(activation_output(output).cpu())
-        return get_hook
-
-    def tanh_output(self, output):
-        result = torch.ones_like(output, dtype=torch.int)
-        result[output < -0.05] = 0
-        result[output > 0.05] = 2
-        return result
-
-    def relu_output(self, output):
-        return (output > 0).int()        
-
-    def on_epoch_begin(self):
-        """Called at the beginning of every epoch."""
-
-    def on_epoch_end(self):
-        """Called at the end of every epoch."""
-        self.epoch += 1
-        if not self.register_ready():   
-            return 
-
+    def export_regions(self, epoch, date):
         self.evaluate_regions()
-        self.activation_storage.pop()
-        activation_pattern = torch.cat(self.activation_storage, dim=1) 
+        self.activation_storage.pop() # The last one does not get any activation
+        activation_pattern = self.get_activation_pattern()
+        print(activation_pattern)
         map_region = {}
 
         for i in range(len(activation_pattern)):
@@ -110,37 +169,4 @@ class InterfaceCallback(Callback):
                 self.resolution,
                 dim=3
             )
-        regions.export(f"epoch{self.epoch}")
-
-    def on_batch_begin(self):
-        """Called at the beginning of every batch."""
-        pass
-
-    def on_batch_end(self):
-        """Called at the end of every batch."""
-        pass
-
-    def on_train_begin(self):
-        if self.log_every is None:
-            self.log_every = self.model.display_every
-
-        self.model.net.register_forward_pre_hook(self.get_input())
-        
-        activation_name = self.model.net.activation.__name__
-        get_hook = self.get_activation_hook(activation_name)
-        for module in self.model.net.modules():   
-            if isinstance(module, torch.nn.modules.linear.Linear):
-                module.register_forward_hook(get_hook)
-
-    def on_train_end(self):
-        """Called at the end of model training."""
-        pass
-
-    def on_predict_begin(self):
-        """Called at the beginning of prediction."""
-        pass
-
-    def on_predict_end(self):
-        """Called at the end of prediction."""
-        pass
-
+        regions.export(f"{date}-epoch{epoch}")
