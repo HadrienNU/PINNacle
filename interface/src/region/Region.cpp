@@ -10,7 +10,7 @@ void Region::addPoint(const glm::vec3 & point) {
     _points.push_back(point);
 }
 
-std::vector<glm::vec3> Region::createMesh() {
+std::vector<glm::vec3> Region::createMesh() const {
     std::vector<glm::vec3> vertices;
     for (size_t i = 1; i < _points.size() - 2; i ++) {
         vertices.push_back(_points[0]);

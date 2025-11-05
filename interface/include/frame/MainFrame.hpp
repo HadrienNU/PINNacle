@@ -40,9 +40,9 @@ private:
     String _title;
     Size _frameSize;    
     Event _event;
-    FramesImGui & _imguiFrames;
     GLFWwindow * _window;
     FrameGL * _frameGL;
+    FramesImGui & _imguiFrames;
 };
 
 #endif

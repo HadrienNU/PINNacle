@@ -8,6 +8,7 @@
 #include <frame/FrameFileSelection.hpp>
 #include <frame/FrameCenterCamera.hpp>
 #include <frame/FrameSettings.hpp>
+#include <frame/FrameRegionInfo.hpp>
 #include <vector>
 #include <memory>
 
