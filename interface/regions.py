@@ -7,10 +7,8 @@ import csv
 
 
 class Regions:
-    def __init__(self, map_region, circle_center, circle_radius, resolution, dim=2):
+    def __init__(self, map_region, resolution, dim=2):
         self.map_region = map_region
-        self.circle_center = circle_center
-        self.circle_radius = circle_radius
         self.resolution = resolution
         self.dim = dim
 
@@ -43,8 +41,6 @@ class Regions:
     def _compute_regions_hull_2d(self):
         regions = {}
         pixel_size = 1.0 / self.resolution  
-        cx, cy = self.circle_center
-        circle = Point(cx, cy).buffer(self.circle_radius, resolution=256)
 
         for region_id, pts in self.map_region.items():
             points = np.array(pts)
@@ -56,7 +52,6 @@ class Regions:
                     poly = Polygon(points[hull.vertices])
                 except Exception:
                     poly = Polygon(points)
-                poly = scale(poly, xfact=1000.0, yfact=1000.0, origin='center')
             
             elif n == 2:
                 line = LineString(points)
@@ -66,14 +61,11 @@ class Regions:
                 x, y = points[0]
                 poly = Point(x, y).buffer(pixel_size * 0.5, resolution=16)
 
-            #clipped = poly.intersection(circle)
-            clipped = poly
-            if not clipped.is_empty and isinstance(clipped, (Polygon, LineString)):
-                if isinstance(clipped, Polygon):
-                    coords = np.array(clipped.exterior.coords)
-                else:  # LineString
-                    coords = np.array(clipped.coords)
-                regions[region_id] = coords
+            if isinstance(poly, Polygon):
+                coords = np.array(poly.exterior.coords)
+            else:  # LineString
+                coords = np.array(poly.coords)
+            regions[region_id] = coords
 
         return regions
     

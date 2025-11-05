@@ -1,13 +1,12 @@
 from interface.regions import Regions
 
-from sklearn.neighbors import NearestNeighbors
-from sklearn.cluster import SpectralClustering
+from sklearn.neighbors import NearestNeighbors, kneighbors_graph
+from sklearn.cluster import AgglomerativeClustering
 from scipy.sparse import coo_matrix
 
 import numpy as np
 import torch
 import hdbscan
-import scipy.sparse as sp
 
 
 class ActivationRegionStrategy:
@@ -16,10 +15,11 @@ class ActivationRegionStrategy:
         self.model = model
         self.register_ready = register_ready
         self.activation_storage = []
+        self.output_storage = []
         self.input_storage = []
         self.map_regions_id = {}                
         self.nb_regions = 0
-        self.resolution = 200
+        self.resolution = 500
         self.init_strategy()        
 
     def init_strategy(self):
@@ -42,6 +42,7 @@ class ActivationRegionStrategy:
         activation_output = self.get_activation_output()
         def get_hook(module, input, output):
             if self.register_ready():
+                self.output_storage.append(output.cpu())
                 self.activation_storage.append(activation_output(output).cpu())
         return get_hook
     
@@ -60,30 +61,29 @@ class ActivationRegionStrategy:
     def register_hook(self):
         self.model.net.register_forward_pre_hook(self.get_input())
         self.activation_name = self.model.net.activation.__name__
+        self.activation_name ="tanh"
         get_hook = self.get_activation_hook()
         for module in self.model.net.modules():   
             if isinstance(module, torch.nn.modules.linear.Linear):
                 module.register_forward_hook(get_hook)
 
     def tanh_pattern(self):
+        output = torch.cat(self.output_storage, dim=1)
         tanh_output = torch.cat(self.activation_storage, dim=1)
-        tanh_output_slope = 1 - tanh_output * tanh_output
-        activation_point = torch.stack((tanh_output, tanh_output_slope), dim=2)
-        activation_point = activation_point.detach()
-
-        num_inputs = tanh_output.shape[0]
+        tanh_output_slope = 1 - tanh_output * tanh_output        
         inputs = self.input_storage[0].detach().cpu().numpy()
+        num_inputs = tanh_output.shape[0]
 
         k = 8
         nn = NearestNeighbors(n_neighbors=k+1, metric='euclidean').fit(inputs)
         _, neighbors = nn.kneighbors(inputs)
 
-        def my_distance(a, b):
-            Ai = activation_point[i]               
-            Aj = activation_point[j]           
-            diff = Aj - Ai
-            squared_distance = torch.sqrt(torch.sum(diff * diff, dim=1)) 
-            return torch.sum(squared_distance).item()
+        def my_distance(i, j):
+            a, b = output[i], output[j]
+            phi_a, phi_b = tanh_output[i], tanh_output[j]
+            phi_da, phi_db = tanh_output_slope[i], tanh_output_slope[j]
+            distance = 2 * (phi_a - phi_b) + (b - a) * (phi_da + phi_db) 
+            return torch.sum(distance ** 2).item()
         
         rows, cols, vals = [], [], []
         for i in range(num_inputs):
@@ -122,22 +122,65 @@ class ActivationRegionStrategy:
         return map_region
 
     def relu_pattern(self):
-        pattern = torch.cat(self.activation_storage, dim=1) 
+        #pattern = torch.cat(self.activation_storage, dim=1) 
+        #map_region = {}
+        #for i in range(len(pattern)):
+        #    input_point = self.input_storage[0][i].tolist()
+        #     region = tuple(pattern[i].tolist())
+        #     if region not in self.map_regions_id:
+        #         self.map_regions_id[region] = self.nb_regions
+        #         self.nb_regions += 1
+        #     id_region = self.map_regions_id[region]
+        #     if id_region in map_region:                
+        #         map_region[id_region].append(input_point)
+        #     else:                
+        #         map_region[id_region] = [input_point]
+        # return map_region
+        output = torch.cat(self.output_storage, dim=1)
+        tanh_output = torch.cat(self.activation_storage, dim=1) 
+        inputs = self.input_storage[0].detach().cpu().numpy()
+        num_inputs = tanh_output.shape[0]
+
+        k = 8
+        nn = NearestNeighbors(n_neighbors=k+1, metric='euclidean').fit(inputs)
+        _, neighbors = nn.kneighbors(inputs)
+        dist_min = 0
+
+        index = {tuple(inputs[i].tolist()) : i for i in range(num_inputs)}
+
+        def my_distance(x, y):
+            i, j = index[tuple(x.tolist())], index[tuple(y.tolist())]
+            a, b = output[i], output[j]
+            phi_a, phi_b = torch.clamp(a, min=0), torch.clamp(b, min=0)
+            phi_da, phi_db = tanh_output[i], tanh_output[j]
+            distance = 2 * (phi_a - phi_b) + (b - a) * (phi_da + phi_db) 
+            dist = torch.sum(distance ** 2).item()
+            return dist
+
+        connectivity = kneighbors_graph(inputs, n_neighbors=8, include_self=False)
+        connectivity = 0.5 * (connectivity + connectivity.T)
+        clusterer = AgglomerativeClustering(
+            metric=my_distance,
+            n_clusters=None,
+            distance_threshold=1e-10,
+            linkage='single',
+            connectivity=connectivity
+        )
+        
+        labels = clusterer.fit_predict(inputs)
+        
         map_region = {}
-        for i in range(len(pattern)):
+        for i in range(num_inputs):
             input_point = self.input_storage[0][i].tolist()
-            region = tuple(pattern[i].tolist())
-            if region not in self.map_regions_id:
-                self.map_regions_id[region] = self.nb_regions
-                self.nb_regions += 1
-            id_region = self.map_regions_id[region]
-            if id_region in map_region:                
+            id_region = labels[i].item()
+            if id_region in map_region:
                 map_region[id_region].append(input_point)
-            else:                
+            else:
                 map_region[id_region] = [input_point]
         return map_region
 
     def evaluate_regions(self):
+        self.output_storage.clear()
         self.activation_storage.clear()
         self.input_storage.clear()
         dim = len(self.model.pde.bbox) // 2      
@@ -162,23 +205,21 @@ class ActivationRegionStrategy:
 
     def export_regions(self, epoch, date):
         self.evaluate_regions()
-        self.activation_storage.pop() # The last one does not get any activation
+        # The last one does not get any activation
+        self.output_storage.pop()
+        self.activation_storage.pop() 
         activation_pattern = self.get_activation_pattern()   
 
         geom = self.model.pde.geom
         if geom.dim == 2:
             regions = Regions(
                 activation_pattern,
-                (geom.center[0], geom.center[1]),
-                geom.radius,
                 self.resolution,
                 dim=2
             )
         elif geom.dim == 3:
             regions = Regions(
                 activation_pattern,
-                (geom.center[0], geom.center[1], geom.center[2]),
-                geom.radius,
                 self.resolution,
                 dim=3
             )
