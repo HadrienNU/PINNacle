@@ -18,11 +18,16 @@ const char * fragmentShaderSource = R"glsl(
 #version 330 core
 
 uniform vec3 color;
-uniform float alpha;
+uniform float alphaPhase;
 
 out vec4 fragColor;
 
+const float ALPHA_MEAN = 0.7;
+const float ALPHA_AMPLITUDE = 0.3;
+const float ANIMATION_SPEED = 3.0;
+
 void main() {
+    float alpha = ALPHA_MEAN + ALPHA_AMPLITUDE * sin(alphaPhase * ANIMATION_SPEED);
     fragColor = vec4(color, alpha);
 }
 )glsl";
@@ -199,7 +204,7 @@ void FrameGL::render() {
     _shader -> bind();
     _shader -> setUniformMatrix("cameraMatrix", _camera.transform);
     
-    double currentTime = glfwGetTime();
+    float currentTime = glfwGetTime();
     
     for (size_t i = 0; i < _regions.size(); i ++) {
         _vaos[i] -> bind();
@@ -208,13 +213,9 @@ void FrameGL::render() {
         ColorGL colorGL = ColorGL(colorRegion);
         glm::vec3 color(colorGL.r, colorGL.g, colorGL.b);
         _shader -> setUniformVector("color", color);
-        
-        float alpha = 1.0f;
-        if (idRegion == _pickedRegionId) {
-            alpha = ALPHA_MEAN + ALPHA_AMPLITUDE * sin(currentTime * ANIMATION_SPEED);
-        }
-        
-        _shader -> setUniformFloat("alpha", alpha);
+        float alphaPhase = (idRegion == _pickedRegionId) ? currentTime : 0.0f;
+        _shader -> setUniformFloat("alphaPhase", alphaPhase);
+
         glDrawArrays(GL_TRIANGLES, 0, _numVertices[i]);
     }   
 }
