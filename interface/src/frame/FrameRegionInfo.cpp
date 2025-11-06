@@ -5,6 +5,18 @@
 FrameRegionInfo::FrameRegionInfo(FrameGL * frameGL) 
     : FrameImGui(REGION_INFO_DEFAULT_TITLE, false), _region(-1), _frameGL(frameGL) {}
 
+void FrameRegionInfo::showRegionInfo(int regionId) {
+    if (regionId >= 0) {
+        _region = Region(regionId);
+        show();
+    }
+}
+
+void FrameRegionInfo::hideRegionInfo() {
+    _region = Region(-1);
+    hide();
+}
+
 void FrameRegionInfo::render() {
     if (!_isVisible) return;
 

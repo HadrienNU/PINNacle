@@ -28,6 +28,16 @@ static void mouse_button_callback(GLFWwindow * window, int button, int action, i
     }
 
     Event & event = frame -> event();
+    
+    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+        ImGuiIO& io = ImGui::GetIO();
+        if (!io.WantCaptureMouse) {
+            double mouseX, mouseY;
+            glfwGetCursorPos(window, &mouseX, &mouseY);
+            frame -> handleLeftClick(mouseX, mouseY);
+        }
+    }
+    
     if (button == GLFW_MOUSE_BUTTON_RIGHT) {
         event.rightButtonPressed = (action == GLFW_PRESS);
     }       
@@ -95,6 +105,23 @@ void MainFrame::translateCamera(float deltaX, float deltaY) {
 
 void MainFrame::rotateCamera(float deltaYaw, float deltaPitch) {
     _frameGL -> rotateCamera(deltaYaw, deltaPitch);
+}
+
+void MainFrame::handleLeftClick(double mouseX, double mouseY) {
+    int regionId = _frameGL -> pickRegion(
+        static_cast<float>(mouseX), 
+        static_cast<float>(mouseY), 
+        _frameSize
+    );
+    
+    std::shared_ptr<FrameRegionInfo> regionInfoFrame = _imguiFrames.getRegionInfoFrame();
+    if (regionInfoFrame) {
+        if (regionId >= 0) {
+            regionInfoFrame->showRegionInfo(regionId);
+        } else {
+            regionInfoFrame->hideRegionInfo();
+        }
+    }
 }
 
 void MainFrame::init() {

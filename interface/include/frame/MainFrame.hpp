@@ -32,6 +32,7 @@ public:
     void scaleCamera(float delta);
     void translateCamera(float deltaX, float deltaY);
     void rotateCamera(float deltaYaw, float deltaPitch);
+    void handleLeftClick(double mouseX, double mouseY);
     void run();
 private:
     void init();

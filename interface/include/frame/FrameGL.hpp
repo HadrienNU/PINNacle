@@ -5,6 +5,7 @@
 #include <opengl/Shader.hpp>
 #include <opengl/VAO.hpp>
 #include <region/Region.hpp>
+#include <region/regionPicker/RegionPicker.hpp>
 #include <memory>
 
 #define DEFAULT_FOV_DEG 45.0f
@@ -44,6 +45,7 @@ public:
     void translateCamera(float deltaX, float deltaY);
     void rotateCamera(float deltaYaw, float deltaPitch);
     void resetCamera();
+    int pickRegion(float screenX, float screenY, const Size & frameSize) const;
 private:
     void updateCamera();
 private:
@@ -53,7 +55,8 @@ private:
     ColorGL _backgroundColor;   
     Camera _camera;
     std::vector<std::unique_ptr<VAO>> _vaos;
-    std::vector<unsigned> _numVertices;  
+    std::vector<unsigned> _numVertices;
+    RegionPicker _regionPicker;
 };
 
 #endif

@@ -18,8 +18,12 @@ public:
     FramesImGui(FrameGL * frameGL);
     ~FramesImGui() = default;
     void render();
+    void showAll();
+    void hideAll();
+    std::shared_ptr<FrameRegionInfo> getRegionInfoFrame() const { return _regionInfoFrame; }
 private:
     std::vector<std::shared_ptr<FrameImGui>> _imguiFrames;
+    std::shared_ptr<FrameRegionInfo> _regionInfoFrame;
 };
 
 #endif

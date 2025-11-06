@@ -9,7 +9,8 @@ FramesImGui::FramesImGui(FrameGL * frameGL) {
     _imguiFrames.push_back(std::make_shared<FrameFileSelection>(frameGL, frameInfo));
     _imguiFrames.push_back(std::make_shared<FrameResetCamera>(frameGL));
     _imguiFrames.push_back(std::make_shared<FrameSettings>(frameGL));
-    _imguiFrames.push_back(std::make_shared<FrameRegionInfo>(frameGL));
+    _regionInfoFrame = std::make_shared<FrameRegionInfo>(frameGL);
+    _imguiFrames.push_back(_regionInfoFrame);
 }
 
 void FramesImGui::render() {
@@ -24,4 +25,20 @@ void FramesImGui::render() {
     }
 
     ImGui::Render();
+}
+
+void FramesImGui::showAll() {
+    for (std::shared_ptr<FrameImGui>& frame : _imguiFrames) {
+        if (frame) {
+            frame->show();
+        }
+    }
+}
+
+void FramesImGui::hideAll() {
+    for (std::shared_ptr<FrameImGui>& frame : _imguiFrames) {
+        if (frame) {
+            frame->hide();
+        }
+    }
 }

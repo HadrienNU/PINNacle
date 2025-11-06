@@ -20,6 +20,8 @@ public:
     FrameRegionInfo(FrameGL * frameGL);
     ~FrameRegionInfo() = default;
     void render() override;
+    void showRegionInfo(int regionId);
+    void hideRegionInfo();
 private:
     Region _region;
     FrameGL * _frameGL;

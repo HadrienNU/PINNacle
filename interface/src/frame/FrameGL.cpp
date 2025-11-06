@@ -121,20 +121,62 @@ void FrameGL::setRegions(const Regions & regions) {
     _regions = regions;    
     _vaos.clear();
     _numVertices.clear();
+    
+    std::vector<int> regionIds;
+    std::vector<std::vector<glm::vec3>> regionMeshes;
+    
     size_t numberOfRegions = _regions.size();
     for (size_t i = 0; i < numberOfRegions; i ++) {
         _vaos.push_back(std::make_unique<VAO>(1));
     }
+    
     for (size_t i = 0; i < numberOfRegions; i ++) {
+        int idRegion = _regions[i].getId();
         std::vector<glm::vec3> vertices = _regions[i].createMesh();
+        
         _vaos[i] -> setVector(VERTEX_BUFFER, vertices);
         _numVertices.push_back((unsigned)vertices.size());
 
-        int idRegion = _regions[i].getId();
         if (_tableColor.find(idRegion) == _tableColor.end()) {
             _tableColor[idRegion] = generateRandomColor();
         }
+        
+        regionIds.push_back(idRegion);
+        regionMeshes.push_back(vertices);
     }
+    
+    if (!_regions.empty()) {
+        _regionPicker.build(regionIds, regionMeshes);
+    }
+}
+
+int FrameGL::pickRegion(float screenX, float screenY, const Size & frameSize) const {
+    float x = (2.0f * screenX) / frameSize.width - 1.0f;
+    float y = 1.0f - (2.0f * screenY) / frameSize.height;
+
+    glm::vec4 rayClip = glm::vec4(x, y, -1.0f, 1.0f);
+
+    glm::mat4 projection = glm::perspective(
+        glm::radians(DEFAULT_FOV_DEG),
+        _camera.aspectRatio,
+        DEFAULT_NEAR_PLANE,
+        DEFAULT_FAR_PLANE
+    );
+    glm::vec4 rayEye = glm::inverse(projection) * rayClip;
+    rayEye = glm::vec4(rayEye.x, rayEye.y, -1.0f, 0.0f);
+
+    glm::mat4 view = glm::lookAt(
+        _camera.position,
+        _camera.lookAt,
+        glm::vec3(0.0f, 1.0f, 0.0f)
+    );
+    glm::vec3 rayWorld = glm::vec3(glm::inverse(view) * rayEye);
+
+    glm::vec3 rayOrigin = _camera.position;
+
+    glm::vec3 rayDir = glm::normalize(rayWorld);
+
+    return _regionPicker.pick(rayOrigin, rayDir);
 }
 
 void FrameGL::render() {
