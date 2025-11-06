@@ -22,11 +22,9 @@ void FrameResetCamera::render() {
 
     ImGui::Begin(
         _title.c_str(), 
-        nullptr,
-        ImGuiWindowFlags_NoResize | 
+        nullptr, 
         ImGuiWindowFlags_NoMove | 
-        ImGuiWindowFlags_NoCollapse |
-        ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoDecoration |
         ImGuiWindowFlags_NoBackground
     );
 

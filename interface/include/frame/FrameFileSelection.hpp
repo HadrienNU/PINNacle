@@ -38,7 +38,7 @@ private:
     void scanCSVFiles();
     void scanFolders();
     void scanDirectory(const String & path, std::vector<String> & results, bool filesOnly, const String & extension = "");
-    void renderComboBox(const char * label, const char * comboId, const std::vector<String> & items, int & selectedIndex, const char * noSelectionText, std::function<void(int)> onSelectionChanged = nullptr);
+    void renderComboBox(const char * comboId, const std::vector<String> & items, int & selectedIndex, const char * noSelectionText, std::function<void(int)> onSelectionChanged = nullptr);
     String getCurrentFolderPath() const;
     size_t countRegions(const String & filepath);
     void selectPreviousFile();

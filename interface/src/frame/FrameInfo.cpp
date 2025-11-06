@@ -17,7 +17,13 @@ void FrameInfo::render() {
     ImGui::SetNextWindowSize(windowSize, ImGuiCond_Always);
     ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x - windowSize.x, 0), ImGuiCond_Always);
     
-    ImGui::Begin(_title.c_str(), &_isVisible);
+    ImGui::Begin(
+        _title.c_str(), 
+        &_isVisible,
+        ImGuiWindowFlags_NoCollapse |
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoMove 
+    );
 
     ImGui::TextColored(IMGUI_TITLE_COLOR, INFO_TITLE);
     ImGui::Separator();

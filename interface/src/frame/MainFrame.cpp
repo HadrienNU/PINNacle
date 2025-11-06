@@ -1,5 +1,4 @@
 #include <frame/MainFrame.hpp>
-#include <cmath>
 
 
 static void error_callback(int error, const char * description) {
@@ -43,7 +42,7 @@ static void mouse_button_callback(GLFWwindow * window, int button, int action, i
             double timeDiff = currentTime - event.lastClickTime;
             double distX = mouseX - event.lastMousePositionX;
             double distY = mouseY - event.lastMousePositionY;
-            double dist = sqrt(distX * distX + distY * distY);
+            double dist = distX * distX + distY * distY;
 
             if (timeDiff < DOUBLE_CLICK_MAX_TIME_DIFF && dist < DOUBLE_CLICK_MAX_DISTANCE) {
                 frame -> handleLeftClick(mouseX, mouseY);

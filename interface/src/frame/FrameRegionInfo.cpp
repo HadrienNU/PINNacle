@@ -30,8 +30,13 @@ void FrameRegionInfo::render() {
     ImGui::SetNextWindowSize(windowSize, ImGuiCond_Always);
     ImGui::SetNextWindowPos(ImVec2(posX, posY), ImGuiCond_Always);
     
-    ImGui::Begin(_title.c_str(), &_isVisible);
-    
+    ImGui::Begin(
+        _title.c_str(), 
+        &_isVisible,
+        ImGuiWindowFlags_NoDecoration |
+        ImGuiWindowFlags_NoMove 
+    );
+
     ImGui::TextColored(IMGUI_TITLE_COLOR, REGION_INFO_TITLE);
     ImGui::Separator();
     ImGui::Spacing();

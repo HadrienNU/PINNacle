@@ -22,10 +22,8 @@ void FrameSettings::render() {
     ImGui::Begin(
         _title.c_str(), 
         nullptr,
-        ImGuiWindowFlags_NoResize | 
         ImGuiWindowFlags_NoMove | 
-        ImGuiWindowFlags_NoCollapse |
-        ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoDecoration |
         ImGuiWindowFlags_NoBackground
     );
 
@@ -45,7 +43,13 @@ void FrameSettings::render() {
         ImGui::SetNextWindowPos(windowPos, ImGuiCond_Always);
         ImGui::SetNextWindowSize(windowSize, ImGuiCond_Always);
 
-        ImGui::Begin(SETTINGS_WINDOW_TITLE, &_settingsWindowOpen, ImGuiWindowFlags_NoCollapse);
+        ImGui::Begin(
+            SETTINGS_WINDOW_TITLE, 
+            &_settingsWindowOpen, 
+            ImGuiWindowFlags_NoCollapse |
+            ImGuiWindowFlags_NoResize |
+            ImGuiWindowFlags_NoMove 
+        );
 
         ImGui::TextColored(IMGUI_TITLE_COLOR, SETTINGS_FONT_SECTION_TITLE);
         ImGui::Separator();
