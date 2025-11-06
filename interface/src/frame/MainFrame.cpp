@@ -1,4 +1,5 @@
 #include <frame/MainFrame.hpp>
+#include <cmath>
 
 
 static void error_callback(int error, const char * description) {
@@ -37,7 +38,20 @@ static void mouse_button_callback(GLFWwindow * window, int button, int action, i
         if (!io.WantCaptureMouse) {
             double mouseX, mouseY;
             glfwGetCursorPos(window, &mouseX, &mouseY);
-            frame -> handleLeftClick(mouseX, mouseY);
+     
+            double currentTime = glfwGetTime();
+            double timeDiff = currentTime - event.lastClickTime;
+            double distX = mouseX - event.lastMousePositionX;
+            double distY = mouseY - event.lastMousePositionY;
+            double dist = sqrt(distX * distX + distY * distY);
+
+            if (timeDiff < DOUBLE_CLICK_MAX_TIME_DIFF && dist < DOUBLE_CLICK_MAX_DISTANCE) {
+                frame -> handleLeftClick(mouseX, mouseY);
+            }
+            
+            event.lastClickTime = currentTime;
+            event.lastMousePositionX = mouseX;
+            event.lastMousePositionY = mouseY;
         }
     }
     
@@ -77,7 +91,7 @@ static void cursor_position_callback(GLFWwindow * window, double xpos, double yp
 
 MainFrame::MainFrame(const String & title, const Size & frameSize, FrameGL * frameGL, FramesImGui & imguiFrames) : 
 _title(title), _frameSize(frameSize), _frameGL(frameGL), _imguiFrames(imguiFrames) {
-    _event = {0, 0, 0, 0};
+    _event = {0, 0, 0, 0, 0, 0, 0};
     init();
 }
 

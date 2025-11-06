@@ -16,6 +16,7 @@ public:
     void unbind();
     void setUniformVector(const String & uniform, const glm::vec3 & vector);
     void setUniformMatrix(const String & uniform, const glm::mat4 & matrix);
+    void setUniformFloat(const String & uniform, float value);
 private:
     void checkShader(GLuint shader);
 private:

@@ -10,10 +10,15 @@
 #include <frame/FrameGL.hpp>
 #include <frame/FramesImGui.hpp>
 
+#define DOUBLE_CLICK_MAX_TIME_DIFF 0.5
+#define DOUBLE_CLICK_MAX_DISTANCE 5.0
 
 struct Event {
     double mousePositionX;
     double mousePositionY;
+    double lastMousePositionX;
+    double lastMousePositionY;
+    double lastClickTime;
     bool rightButtonPressed;
     bool leftButtonPressed;
 };

@@ -1,4 +1,6 @@
 #include <frame/FrameGL.hpp>
+#include <GLFW/glfw3.h>
+#include <cmath>
 
 
 const char * vertexShaderSource = R"glsl(
@@ -16,11 +18,12 @@ const char * fragmentShaderSource = R"glsl(
 #version 330 core
 
 uniform vec3 color;
+uniform float alpha;
 
 out vec4 fragColor;
 
 void main() {
-    fragColor = vec4(color, 1);
+    fragColor = vec4(color, alpha);
 }
 )glsl";
 
@@ -36,6 +39,7 @@ _backgroundColor(backgroundColor) {
     _camera.position = glm::vec3(0.0f);
     _camera.lookAt = glm::vec3(0.0f);
     _camera.transform = glm::mat4(1.0f);
+    _pickedRegionId = -1;
 }
 
 FrameGL::~FrameGL() {
@@ -44,6 +48,8 @@ FrameGL::~FrameGL() {
 
 void FrameGL::init(const Size & frameSize) {
     glEnable(GL_MULTISAMPLE);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     _shader = new Shader(vertexShaderSource, fragmentShaderSource);
     resize(frameSize);
 }
@@ -150,7 +156,7 @@ void FrameGL::setRegions(const Regions & regions) {
     }
 }
 
-int FrameGL::pickRegion(float screenX, float screenY, const Size & frameSize) const {
+int FrameGL::pickRegion(float screenX, float screenY, const Size & frameSize) {
     float x = (2.0f * screenX) / frameSize.width - 1.0f;
     float y = 1.0f - (2.0f * screenY) / frameSize.height;
 
@@ -176,7 +182,9 @@ int FrameGL::pickRegion(float screenX, float screenY, const Size & frameSize) co
 
     glm::vec3 rayDir = glm::normalize(rayWorld);
 
-    return _regionPicker.pick(rayOrigin, rayDir);
+    _pickedRegionId = _regionPicker.pick(rayOrigin, rayDir);
+
+    return _pickedRegionId;
 }
 
 void FrameGL::render() {
@@ -190,6 +198,9 @@ void FrameGL::render() {
     
     _shader -> bind();
     _shader -> setUniformMatrix("cameraMatrix", _camera.transform);
+    
+    double currentTime = glfwGetTime();
+    
     for (size_t i = 0; i < _regions.size(); i ++) {
         _vaos[i] -> bind();
         int idRegion = _regions[i].getId();
@@ -197,6 +208,13 @@ void FrameGL::render() {
         ColorGL colorGL = ColorGL(colorRegion);
         glm::vec3 color(colorGL.r, colorGL.g, colorGL.b);
         _shader -> setUniformVector("color", color);
+        
+        float alpha = 1.0f;
+        if (idRegion == _pickedRegionId) {
+            alpha = ALPHA_MEAN + ALPHA_AMPLITUDE * sin(currentTime * ANIMATION_SPEED);
+        }
+        
+        _shader -> setUniformFloat("alpha", alpha);
         glDrawArrays(GL_TRIANGLES, 0, _numVertices[i]);
     }   
 }

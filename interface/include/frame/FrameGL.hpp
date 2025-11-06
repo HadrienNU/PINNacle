@@ -22,6 +22,10 @@
 #define TRANSLATE_SENSIBILITY 0.0005f
 #define ROTATION_SPEED 0.005f
 
+#define ALPHA_MEAN 0.8f
+#define ALPHA_AMPLITUDE 0.2f
+#define ANIMATION_SPEED 3.0f
+
 
 struct Camera {    
     float distance;
@@ -45,7 +49,7 @@ public:
     void translateCamera(float deltaX, float deltaY);
     void rotateCamera(float deltaYaw, float deltaPitch);
     void resetCamera();
-    int pickRegion(float screenX, float screenY, const Size & frameSize) const;
+    int pickRegion(float screenX, float screenY, const Size & frameSize);
 private:
     void updateCamera();
 private:
@@ -57,6 +61,7 @@ private:
     std::vector<std::unique_ptr<VAO>> _vaos;
     std::vector<unsigned> _numVertices;
     RegionPicker _regionPicker;
+    int _pickedRegionId;
 };
 
 #endif
