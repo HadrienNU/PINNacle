@@ -14,6 +14,8 @@ static void framebuffer_size_callback(GLFWwindow * window, int width, int height
 }
 
 static void scroll_callback(GLFWwindow * window, double, double yoffset) {
+    if (ImGui::GetIO().WantCaptureMouse) return;
+
     MainFrame * frame = static_cast<MainFrame *>(glfwGetWindowUserPointer(window));
     if (!frame) {
         return;
@@ -22,6 +24,7 @@ static void scroll_callback(GLFWwindow * window, double, double yoffset) {
 }
 
 static void mouse_button_callback(GLFWwindow * window, int button, int action, int) {
+    if (ImGui::GetIO().WantCaptureMouse) return;
     MainFrame * frame = static_cast<MainFrame *>(glfwGetWindowUserPointer(window));
     if (!frame) {
         return;
@@ -53,6 +56,7 @@ static void mouse_button_callback(GLFWwindow * window, int button, int action, i
 
 
 static void cursor_position_callback(GLFWwindow * window, double xpos, double ypos) {
+    if (ImGui::GetIO().WantCaptureMouse) return;
     MainFrame * frame = static_cast<MainFrame *>(glfwGetWindowUserPointer(window));
     if (!frame) {
         return;
