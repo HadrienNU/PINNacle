@@ -61,7 +61,6 @@ class ActivationRegionStrategy:
     def register_hook(self):
         self.model.net.register_forward_pre_hook(self.get_input())
         self.activation_name = self.model.net.activation.__name__
-        self.activation_name ="tanh"
         get_hook = self.get_activation_hook()
         for module in self.model.net.modules():   
             if isinstance(module, torch.nn.modules.linear.Linear):
@@ -74,47 +73,60 @@ class ActivationRegionStrategy:
         inputs = self.input_storage[0].detach().cpu().numpy()
         num_inputs = tanh_output.shape[0]
 
-        k = 8
-        nn = NearestNeighbors(n_neighbors=k+1, metric='euclidean').fit(inputs)
-        _, neighbors = nn.kneighbors(inputs)
+        # k = 8
+        # nn = NearestNeighbors(n_neighbors=k+1, metric='euclidean').fit(inputs)
+        # _, neighbors = nn.kneighbors(inputs)
 
-        def my_distance(i, j):
+        index = {tuple(inputs[i].tolist()) : i for i in range(num_inputs)}
+        def my_distance(x, y):
+            i, j = index[tuple(x.tolist())], index[tuple(y.tolist())]
             a, b = output[i], output[j]
             phi_a, phi_b = tanh_output[i], tanh_output[j]
             phi_da, phi_db = tanh_output_slope[i], tanh_output_slope[j]
             distance = 2 * (phi_a - phi_b) + (b - a) * (phi_da + phi_db) 
             return torch.sum(distance ** 2).item()
         
-        rows, cols, vals = [], [], []
-        for i in range(num_inputs):
-            for j in neighbors[i][1:]:
-                d = my_distance(i, j)
-                rows.append(i)
-                cols.append(j)
-                vals.append(d)
+        # rows, cols, vals = [], [], []
+        # for i in range(num_inputs):
+        #     for j in neighbors[i][1:]:
+        #         d = my_distance(i, j)
+        #         rows.append(i)
+        #         cols.append(j)
+        #         vals.append(d)
 
-        rows = np.array(rows, dtype=int)
-        cols = np.array(cols, dtype=int)
-        vals = np.array(vals, dtype=float)
+        # rows = np.array(rows, dtype=int)
+        # cols = np.array(cols, dtype=int)
+        # vals = np.array(vals, dtype=float)
 
-        clusterer = hdbscan.HDBSCAN(
-            metric='precomputed',
-            min_samples=1,
-            min_cluster_size=5,
-            approx_min_span_tree=True,
-            core_dist_n_jobs=-1     # multithread
+        # clusterer = hdbscan.HDBSCAN(
+        #     metric='precomputed',
+        #     min_samples=1,
+        #     min_cluster_size=5,
+        #     approx_min_span_tree=True,
+        #     core_dist_n_jobs=-1     # multithread
+        # )
+
+        connectivity = kneighbors_graph(inputs, n_neighbors=8, include_self=False)
+        connectivity = 0.5 * (connectivity + connectivity.T)
+        clusterer = AgglomerativeClustering(
+            metric=my_distance,
+            n_clusters=None,
+            distance_threshold=1e-14,
+            linkage='single',
+            connectivity=connectivity
         )
 
-        dist_sparse = coo_matrix((vals, (rows, cols)), shape=(num_inputs, num_inputs))        
-        # Sym but don't know if it is useful :
-        dist_sparse = dist_sparse.minimum(dist_sparse.transpose())
-        dist_sparse = dist_sparse.tocsr()
-        clusterer.fit(dist_sparse)
+        # dist_sparse = coo_matrix((vals, (rows, cols)), shape=(num_inputs, num_inputs))        
+        # # Sym but don't know if it is useful :
+        # dist_sparse = dist_sparse.minimum(dist_sparse.transpose())
+        # dist_sparse = dist_sparse.tocsr()
+        # clusterer.fit(dist_sparse)
 
+        labels = clusterer.fit_predict(inputs)
         map_region = {}
         for i in range(num_inputs):
             input_point = self.input_storage[0][i].tolist()
-            id_region = clusterer.labels_[i].item()
+            id_region = labels[i].item()
             if id_region in map_region:
                 map_region[id_region].append(input_point)
             else:
@@ -162,7 +174,7 @@ class ActivationRegionStrategy:
         clusterer = AgglomerativeClustering(
             metric=my_distance,
             n_clusters=None,
-            distance_threshold=1e-10,
+            distance_threshold=1e-12,
             linkage='single',
             connectivity=connectivity
         )
