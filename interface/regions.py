@@ -1,85 +1,109 @@
 import numpy as np
 from shapely.geometry import Polygon, LineString, Point
-from shapely.affinity import scale
 from scipy.spatial import ConvexHull
 import trimesh
 import csv
+from pathlib import Path
 
 
 class Regions:
-    def __init__(self, map_region, resolution, dim=2):
+
+    def __init__(self, map_region: dict[int, list[list[float]]], resolution: float, dim: int = 3):
         self.map_region = map_region
         self.resolution = resolution
         self.dim = dim
 
-    def export(self, filename):
-        regions = self._compute_regions_hull()
-        filename_csv = f"runs/{filename}.csv"
-        data = [['x', 'y', 'z', 'class']]
-        for region in regions:
-            for vertex in regions[region]:
-                x = vertex[0]
-                y = vertex[1]
-                if len(vertex) > 2:
-                    z = vertex[2]
-                else:
-                    z = 0.0
-                data.append([x, y, z, region])
-                
+    def export(self, filename: str):
+        """Exporte toutes les régions en triangles (x, y, z, class)."""
+        regions_triangles = self._compute_regions_triangles()
+
+        Path("runs").mkdir(exist_ok=True)
+        filename_csv = Path(f"runs/{filename}.csv")
+
         with open(filename_csv, mode='w', newline='', encoding='utf-8') as file:
             writer = csv.writer(file)
-            writer.writerows(data)
-    
-    def _compute_regions_hull(self):
+            writer.writerow(['x', 'y', 'z', 'class'])
+
+            for region_id, triangles in regions_triangles.items():
+                for tri in triangles: 
+                    for vertex in tri:
+                        writer.writerow([vertex[0], vertex[1], vertex[2], region_id])
+
+
+    def _compute_regions_triangles(self):
+        """Choisit la méthode 2D ou 3D selon la dimension."""
         if self.dim == 2:
-            return self._compute_regions_hull_2d()
+            return self._compute_regions_triangles_2d()
         elif self.dim == 3:
-            return self._compute_regions_hull_3d()
+            return self._compute_regions_triangles_3d()
         else:
-            raise ValueError(f"Dimension {self.dim} not supported")
-    
-    def _compute_regions_hull_2d(self):
+            raise ValueError(f"Dimension {self.dim} non supportée")
+
+    def _compute_regions_triangles_2d(self):
         regions = {}
-        pixel_size = 1.0 / self.resolution  
+        pixel_size = 1.0 / self.resolution
 
         for region_id, pts in self.map_region.items():
             points = np.array(pts)
             n = len(points)
+            triangles = []
 
             if n >= 3:
                 try:
                     hull = ConvexHull(points, qhull_options='QJ')
-                    poly = Polygon(points[hull.vertices])
+                    polygon = Polygon(points[hull.vertices])
                 except Exception:
-                    poly = Polygon(points)
-            
+                    polygon = Polygon(points)
+
+                coords = np.array(polygon.exterior.coords)
+                center = np.mean(coords, axis=0)
+
+                for i in range(len(coords) - 2):
+                    tri = np.array([
+                        [coords[0, 0], coords[0, 1], 0.0],
+                        [coords[i + 1, 0], coords[i + 1, 1], 0.0],
+                        [coords[i + 2, 0], coords[i + 2, 1], 0.0]
+                    ])
+                    triangles.append(tri)
+
             elif n == 2:
                 line = LineString(points)
-                poly = line.buffer(pixel_size * 0.5, cap_style=1, join_style=2)
+                buffer_poly = line.buffer(pixel_size * 0.5, cap_style=1, join_style=2)
+                coords = np.array(buffer_poly.exterior.coords)
+                for i in range(len(coords) - 2):
+                    tri = np.array([
+                        [coords[0, 0], coords[0, 1], 0.0],
+                        [coords[i + 1, 0], coords[i + 1, 1], 0.0],
+                        [coords[i + 2, 0], coords[i + 2, 1], 0.0]
+                    ])
+                    triangles.append(tri)
 
             else:
                 x, y = points[0]
-                poly = Point(x, y).buffer(pixel_size * 0.5, resolution=16)
+                circle = Point(x, y).buffer(pixel_size * 0.5, resolution=8)
+                coords = np.array(circle.exterior.coords)
+                for i in range(len(coords) - 2):
+                    tri = np.array([
+                        [coords[0, 0], coords[0, 1], 0.0],
+                        [coords[i + 1, 0], coords[i + 1, 1], 0.0],
+                        [coords[i + 2, 0], coords[i + 2, 1], 0.0]
+                    ])
+                    triangles.append(tri)
 
-            if isinstance(poly, Polygon):
-                coords = np.array(poly.exterior.coords)
-            else:  # LineString
-                coords = np.array(poly.coords)
-            regions[region_id] = coords
+            regions[region_id] = triangles
 
         return regions
-    
-    def _compute_regions_hull_3d(self):
+
+    def _compute_regions_triangles_3d(self):
         regions = {}
-        pixel_size = 1.0 / self.resolution  
-        cx, cy, cz = self.circle_center
-        sphere = trimesh.creation.icosphere(subdivisions=3, radius=self.circle_radius)
-        sphere.apply_translation([cx, cy, cz])
-        
+        pixel_size = 1.0 / self.resolution
+
         for region_id, pts in self.map_region.items():
             points = np.array(pts)
             n = len(points)
+            triangles = []
 
+            # --- Cas 1 : Convex Hull 3D
             if n >= 4:
                 try:
                     hull = ConvexHull(points, qhull_options='QJ')
@@ -87,36 +111,28 @@ class Regions:
                 except Exception:
                     continue
 
+            # --- Cas 2 : 3 points -> triangle
             elif n == 3:
-                try:
-                    mesh = trimesh.Trimesh(vertices=points, 
-                                          faces=[[0, 1, 2]])
-                except Exception:
-                    continue
+                mesh = trimesh.Trimesh(vertices=points, faces=[[0, 1, 2]])
 
+            # --- Cas 3 : 2 points -> cylinder
             elif n == 2:
-                line = trimesh.creation.cylinder(radius=pixel_size * 0.5, 
-                                                  segment=points,
-                                                  sections=8)
-                mesh = line
+                mesh = trimesh.creation.cylinder(
+                    radius=pixel_size * 0.5,
+                    segment=points,
+                    sections=8
+                )
 
+            # --- Cas 4 : 1 point -> icosphere
             else:
                 x, y, z = points[0]
                 mesh = trimesh.creation.icosphere(subdivisions=1, radius=pixel_size * 0.5)
                 mesh.apply_translation([x, y, z])
 
-            try:
-                clipped = mesh.intersection(sphere)
-                if not clipped.is_empty and hasattr(clipped, 'vertices'):
-                    coords = np.array(clipped.vertices)
-                    if len(coords) > 0:
-                        regions[region_id] = coords
-            except Exception:
-                distances = np.linalg.norm(mesh.vertices - np.array([cx, cy, cz]), axis=1)
-                mask = distances <= self.circle_radius
-                coords = mesh.vertices[mask]
-                if len(coords) > 0:
-                    regions[region_id] = np.unique(coords, axis=0)
+            if hasattr(mesh, 'triangles') and len(mesh.triangles) > 0:
+                for tri in mesh.triangles:
+                    triangles.append(tri)
+
+            regions[region_id] = triangles
 
         return regions
-

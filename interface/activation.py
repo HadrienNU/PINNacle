@@ -20,6 +20,7 @@ class ActivationRegionStrategy:
         self.map_regions_id = {}                
         self.nb_regions = 0
         self.resolution = 500
+        self.dim = len(model.pde.bbox) // 2
         self.init_strategy()        
 
     def init_strategy(self):
@@ -195,20 +196,20 @@ class ActivationRegionStrategy:
         self.output_storage.clear()
         self.activation_storage.clear()
         self.input_storage.clear()
-        dim = len(self.model.pde.bbox) // 2      
-        if dim == 2:
+              
+        if self.dim == 2:
             x_range = torch.linspace(self.model.pde.bbox[0], self.model.pde.bbox[1], self.resolution)
             y_range = torch.linspace(self.model.pde.bbox[2], self.model.pde.bbox[3], self.resolution)
             xx, yy = torch.meshgrid(x_range, y_range, indexing='ij')
             grid_points = torch.stack([xx.reshape(-1), yy.reshape(-1)], dim=1)
-        elif dim == 3:
+        elif self.dim == 3:
             self.resolution = 10  # Reduce resolution for 3D to limit memory usage
             x_range = torch.linspace(self.model.pde.bbox[0], self.model.pde.bbox[1], self.resolution)
             y_range = torch.linspace(self.model.pde.bbox[2], self.model.pde.bbox[3], self.resolution)
             z_range = torch.linspace(self.model.pde.bbox[4], self.model.pde.bbox[5], self.resolution)
             xx, yy, zz = torch.meshgrid(x_range, y_range, z_range, indexing='ij')
             grid_points = torch.stack([xx.reshape(-1), yy.reshape(-1), zz.reshape(-1)], dim=1)
-        if dim > self.model.pde.geom.dim: # Time 
+        if self.dim > self.model.pde.geom.dim: # Time 
             inside_mask = self.model.pde.geom.inside(grid_points[:, :-1].cpu().numpy())
         else:
             inside_mask = self.model.pde.geom.inside(grid_points.cpu().numpy())
@@ -222,18 +223,10 @@ class ActivationRegionStrategy:
         self.activation_storage.pop() 
         activation_pattern = self.get_activation_pattern()   
 
-        geom = self.model.pde.geom
-        if geom.dim == 2:
-            regions = Regions(
-                activation_pattern,
-                self.resolution,
-                dim=2
-            )
-        elif geom.dim == 3:
-            regions = Regions(
-                activation_pattern,
-                self.resolution,
-                dim=3
-            )
+        regions = Regions(
+            activation_pattern,
+            self.resolution,
+            dim=self.dim
+        )
         regions.export(f"{date}-epoch{epoch}")
         

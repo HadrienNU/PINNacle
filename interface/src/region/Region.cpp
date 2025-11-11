@@ -1,4 +1,5 @@
 #include <region/Region.hpp>
+#include <util.hpp>
 
 Region::Region(int id) : _id(id) {}
 
@@ -12,10 +13,10 @@ void Region::addPoint(const glm::vec3 & point) {
 
 std::vector<glm::vec3> Region::createMesh() {
     std::vector<glm::vec3> vertices;
-    for (size_t i = 1; i < _points.size() - 2; i ++) {
-        vertices.push_back(_points[0]);
+    for (size_t i = 0; i < _points.size(); i +=3) {
         vertices.push_back(_points[i]);
         vertices.push_back(_points[i + 1]);
+        vertices.push_back(_points[i + 2]);
     }
     return vertices;
 }

@@ -10,44 +10,45 @@ void RegionReader::setRegionFilePath(const String & regionFilePath) {
 
 Regions RegionReader::read() const {
     Regions regions;
-    if (_regionFilePath.empty()) {
-        return regions;
-    }
+    if (_regionFilePath.empty()) return regions;
+
     std::ifstream regionFile(_regionFilePath);
-    if (!regionFile.is_open()) {
-        return regions;
-    }
+    if (!regionFile.is_open()) return regions;
 
     String line;
-    Region currentRegion(-1); // This region does not exist
-    int currentIdRegion = -1;
     bool header = true;
+
+    Region currentRegion(-1);
+    int currentIdRegion = -1;
+
     while (std::getline(regionFile, line)) {
-        if (header) {
-            header = false;
-            continue;
-        }
+        if (header) { header = false; continue; }
+
         std::stringstream ss(line);
-        String x, y, z, idRegion;
+        String x, y, z, idRegionStr;
 
         std::getline(ss, x, ',');
         std::getline(ss, y, ',');
         std::getline(ss, z, ',');
-        std::getline(ss, idRegion, ',');
+        std::getline(ss, idRegionStr, ',');
+
+        int idRegion = std::stoi(idRegionStr);
+
+        if (currentIdRegion == -1) {
+            currentIdRegion = idRegion;
+            currentRegion = Region(currentIdRegion);
+        } else if (idRegion != currentIdRegion) {
+            regions.push_back(currentRegion);
+            currentIdRegion = idRegion;
+            currentRegion = Region(currentIdRegion);
+        }
 
         glm::vec3 point(std::stof(x), std::stof(y), std::stof(z));
         currentRegion.addPoint(point);
+    }
 
-        /* Changing region */
-        if (currentIdRegion == -1) {
-            currentIdRegion = std::stoi(idRegion);
-            currentRegion = Region(currentIdRegion);
-        }
-        if (std::stoi(idRegion) != currentIdRegion) {
-            currentIdRegion = std::stoi(idRegion);
-            regions.push_back(currentRegion);
-            currentRegion = Region(currentIdRegion);
-        }
+    if (currentIdRegion != -1 && !currentRegion.getPoints().empty()) {
+        regions.push_back(currentRegion);
     }
 
     regionFile.close();
