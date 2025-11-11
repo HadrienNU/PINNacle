@@ -55,6 +55,7 @@ void FrameGL::init(const Size & frameSize) {
     glEnable(GL_MULTISAMPLE);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_DEPTH_TEST);
     _shader = new Shader(vertexShaderSource, fragmentShaderSource);
     resize(frameSize);
 }
@@ -199,7 +200,7 @@ void FrameGL::render() {
         _backgroundColor.b, 
         1.0f
     );
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
     _shader -> bind();
     _shader -> setUniformMatrix("cameraMatrix", _camera.transform);
