@@ -38,7 +38,7 @@ from interface.callbacks import InterfaceCallback
 #     [PoissonND, HeatND]
 
 pde_list = [
-    Burgers2D
+    Electric_Ritz
 ]
 
 # pde_list += \
