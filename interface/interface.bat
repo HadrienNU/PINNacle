@@ -19,7 +19,7 @@ if /I "%CMD%"=="clean" goto :clean
 goto :usage
 
 :configure
-echo [configure] CMake configure -> %BUILD_DIR%
+echo [configure] CMake configure to %BUILD_DIR%
 REM Optional: support extra CMake args via environment variable CMAKE_ARGS (e.g., -G "MinGW Makefiles" or -A x64)
 if not "%CMAKE_ARGS%"=="" (
 	echo [configure] Extra CMake args: %CMAKE_ARGS%
