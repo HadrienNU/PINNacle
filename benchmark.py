@@ -92,16 +92,26 @@ if __name__ == "__main__":
     for pde_config in pde_list:
 
         def get_model_dde():
-            pde_forms = [Magnetism_2D, Electric_2D, Magnetism_Ritz, Electric_Ritz]
+            pde_forms_2d = [Magnetism_2D, Electric_2D, Magnetism_Ritz, Electric_Ritz]
+            pde_forms_3d = [Electric_Ritz_3D]
             if isinstance(pde_config, tuple):
                 pde = pde_config[0](**pde_config[1])
-            if any(isinstance(pde_config, pde_form) for pde_form in pde_forms):
+            elif any(isinstance(pde_config, pde_form) for pde_form in pde_forms_2d):
                 if "disk" in command_args.name:
                     pde = pde_config(form="disk")
                 elif "ellipse" in command_args.name:
                     pde = pde_config(form="ellipse")
                 elif "polygon" in command_args.name:
                     pde = pde_config(form="polygon")
+                else:
+                    pde = pde_config()
+            elif any(isinstance(pde_config, pde_form) for pde_form in pde_forms_3d):
+                if "sphere" in command_args.name:
+                    pde = pde_config(form="sphere")
+                elif "ellipsoid" in command_args.name:
+                    pde = pde_config(form="ellipsoid")
+                elif "cuboid" in command_args.name:
+                    pde = pde_config(form="cuboid")
                 else:
                     pde = pde_config()
             else:
