@@ -67,21 +67,46 @@ class Regions:
                     triangles.append(tri)
 
             elif n == 2:
-                line = LineString(points)
-                buffer_poly = line.buffer(pixel_size * 0.5, cap_style=1, join_style=2)
-                coords = np.array(buffer_poly.exterior.coords)
-                for i in range(len(coords) - 2):
-                    tri = np.array([
-                        [coords[0, 0], coords[0, 1], 0.0],
-                        [coords[i + 1, 0], coords[i + 1, 1], 0.0],
-                        [coords[i + 2, 0], coords[i + 2, 1], 0.0]
-                    ])
-                    triangles.append(tri)
+                # Créer un rectangle non arrondi entre deux points
+                p1, p2 = points[0], points[1]
+                direction = p2 - p1
+                length = np.linalg.norm(direction)
+                direction = direction / length
+                
+                # Vecteur perpendiculaire
+                perpendicular = np.array([-direction[1], direction[0]])
+                half_width = pixel_size * 0.5
+                
+                # Les 4 coins du rectangle
+                rect_points = np.array([
+                    p1 - perpendicular * half_width,
+                    p1 + perpendicular * half_width,
+                    p2 + perpendicular * half_width,
+                    p2 - perpendicular * half_width
+                ])
+                
+                # Créer deux triangles pour le rectangle
+                triangles.append(np.array([
+                    [rect_points[0, 0], rect_points[0, 1], 0.0],
+                    [rect_points[1, 0], rect_points[1, 1], 0.0],
+                    [rect_points[2, 0], rect_points[2, 1], 0.0]
+                ]))
+                triangles.append(np.array([
+                    [rect_points[0, 0], rect_points[0, 1], 0.0],
+                    [rect_points[2, 0], rect_points[2, 1], 0.0],
+                    [rect_points[3, 0], rect_points[3, 1], 0.0]
+                ]))
 
             else:
                 x, y = points[0]
-                circle = Point(x, y).buffer(pixel_size * 0.5, resolution=8)
-                coords = np.array(circle.exterior.coords)
+                half_size = pixel_size * 0.5
+                square = Polygon([
+                    [x - half_size, y - half_size],
+                    [x + half_size, y - half_size],
+                    [x + half_size, y + half_size],
+                    [x - half_size, y + half_size]
+                ])
+                coords = np.array(square.exterior.coords)
                 for i in range(len(coords) - 2):
                     tri = np.array([
                         [coords[0, 0], coords[0, 1], 0.0],
@@ -115,18 +140,31 @@ class Regions:
             elif n == 3:
                 mesh = trimesh.Trimesh(vertices=points, faces=[[0, 1, 2]])
 
-            # --- Cas 3 : 2 points -> cylinder
+            # --- Cas 3 : 2 points -> pavé droit
             elif n == 2:
-                mesh = trimesh.creation.cylinder(
-                    radius=pixel_size * 0.5,
-                    segment=points,
-                    sections=8
-                )
+                p1, p2 = points[0], points[1]
+                length = np.linalg.norm(p2 - p1)
+                center = (p1 + p2) / 2
+                
+                # Créer un pavé droit orienté entre les deux points
+                mesh = trimesh.creation.box(extents=[pixel_size, pixel_size, length])
+                
+                # Calculer la rotation pour orienter le pavé
+                direction = (p2 - p1) / length
+                z_axis = np.array([0, 0, 1])
+                
+                if not np.allclose(direction, z_axis):
+                    rotation_axis = np.cross(z_axis, direction)
+                    rotation_axis = rotation_axis / np.linalg.norm(rotation_axis)
+                    angle = np.arccos(np.clip(np.dot(z_axis, direction), -1.0, 1.0))
+                    mesh = mesh.apply_transform(trimesh.transformations.rotation_matrix(angle, rotation_axis))
+                
+                mesh.apply_translation(center)
 
-            # --- Cas 4 : 1 point -> icosphere
+            # --- Cas 4 : 1 point -> cube
             else:
                 x, y, z = points[0]
-                mesh = trimesh.creation.icosphere(subdivisions=1, radius=pixel_size * 0.5)
+                mesh = trimesh.creation.box(extents=[pixel_size, pixel_size, pixel_size])
                 mesh.apply_translation([x, y, z])
 
             if hasattr(mesh, 'triangles') and len(mesh.triangles) > 0:
