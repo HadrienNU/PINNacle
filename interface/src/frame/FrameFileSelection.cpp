@@ -17,17 +17,30 @@ void FrameFileSelection::render() {
         return;
     }
 
-    ImVec2 windowSize(FILE_SELECTION_WINDOW_WIDTH, FILE_SELECTION_WINDOW_HEIGHT);
-    ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(windowSize, ImGuiCond_FirstUseEver);
+    ImGuiIO & io = ImGui::GetIO();
+    float scale = io.FontGlobalScale;
+    ImVec2 windowSize(FILE_SELECTION_WINDOW_WIDTH * scale, FILE_SELECTION_WINDOW_HEIGHT * scale);
+    ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(windowSize, ImGuiCond_Always);
     
-    ImGui::Begin(_title.c_str(), &_isVisible);
+    ImGui::Begin(
+        _title.c_str(), 
+        &_isVisible,
+        ImGuiWindowFlags_NoCollapse |
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoMove 
+    );
 
     ImGui::TextColored(IMGUI_TITLE_COLOR, FILE_SELECTION_TITLE);
     ImGui::Separator();
     
+    float buttonSize = ImGui::GetFrameHeight();
+    float spacing = ImGui::GetStyle().ItemSpacing.x;
+    float buttonsWidth = 2 * buttonSize + spacing;
+    
+    ImGui::Text("%s", FILE_SELECTION_FOLDER_LABEL);
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - buttonsWidth - spacing);
     renderComboBox(
-        FILE_SELECTION_FOLDER_LABEL,
         "##foldercombo",
         _folders,
         _selectedFolderIndex,
@@ -40,8 +53,9 @@ void FrameFileSelection::render() {
     
     ImGui::Spacing();
     
+    ImGui::Text("%s", FILE_SELECTION_FILE_LABEL);
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - buttonsWidth - spacing);
     renderComboBox(
-        FILE_SELECTION_FILE_LABEL,
         "##csvcombo",
         _csvFiles,
         _selectedFileIndex,
@@ -121,9 +135,7 @@ void FrameFileSelection::scanDirectory(const String & path, std::vector<String> 
     }
 }
 
-void FrameFileSelection::renderComboBox(const char * label, const char * comboId, const std::vector<String> & items, int & selectedIndex, const char * noSelectionText, std::function<void(int)> onSelectionChanged) {
-    ImGui::Text("%s", label);
-    
+void FrameFileSelection::renderComboBox(const char * comboId, const std::vector<String> & items, int & selectedIndex, const char * noSelectionText, std::function<void(int)> onSelectionChanged) {
     bool isSelected = (selectedIndex >= 0 && selectedIndex < static_cast<int>(items.size()));
     const char * currentSelection = isSelected ? items[selectedIndex].c_str() : noSelectionText;
     

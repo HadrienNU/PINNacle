@@ -14,6 +14,8 @@ static void framebuffer_size_callback(GLFWwindow * window, int width, int height
 }
 
 static void scroll_callback(GLFWwindow * window, double, double yoffset) {
+    if (ImGui::GetIO().WantCaptureMouse) return;
+
     MainFrame * frame = static_cast<MainFrame *>(glfwGetWindowUserPointer(window));
     if (!frame) {
         return;
@@ -22,12 +24,36 @@ static void scroll_callback(GLFWwindow * window, double, double yoffset) {
 }
 
 static void mouse_button_callback(GLFWwindow * window, int button, int action, int) {
+    if (ImGui::GetIO().WantCaptureMouse) return;
     MainFrame * frame = static_cast<MainFrame *>(glfwGetWindowUserPointer(window));
     if (!frame) {
         return;
     }
 
     Event & event = frame -> event();
+    
+    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+        ImGuiIO& io = ImGui::GetIO();
+        if (!io.WantCaptureMouse) {
+            double mouseX, mouseY;
+            glfwGetCursorPos(window, &mouseX, &mouseY);
+     
+            double currentTime = glfwGetTime();
+            double timeDiff = currentTime - event.lastClickTime;
+            double distX = mouseX - event.lastMousePositionX;
+            double distY = mouseY - event.lastMousePositionY;
+            double dist = distX * distX + distY * distY;
+
+            if (timeDiff < DOUBLE_CLICK_MAX_TIME_DIFF && dist < DOUBLE_CLICK_MAX_DISTANCE) {
+                frame -> handleLeftClick(mouseX, mouseY);
+            }
+            
+            event.lastClickTime = currentTime;
+            event.lastMousePositionX = mouseX;
+            event.lastMousePositionY = mouseY;
+        }
+    }
+    
     if (button == GLFW_MOUSE_BUTTON_RIGHT) {
         event.rightButtonPressed = (action == GLFW_PRESS);
     }       
@@ -43,6 +69,7 @@ static void mouse_button_callback(GLFWwindow * window, int button, int action, i
 
 
 static void cursor_position_callback(GLFWwindow * window, double xpos, double ypos) {
+    if (ImGui::GetIO().WantCaptureMouse) return;
     MainFrame * frame = static_cast<MainFrame *>(glfwGetWindowUserPointer(window));
     if (!frame) {
         return;
@@ -63,7 +90,7 @@ static void cursor_position_callback(GLFWwindow * window, double xpos, double yp
 
 MainFrame::MainFrame(const String & title, const Size & frameSize, FrameGL * frameGL, FramesImGui & imguiFrames) : 
 _title(title), _frameSize(frameSize), _frameGL(frameGL), _imguiFrames(imguiFrames) {
-    _event = {0, 0, 0, 0};
+    _event = {0, 0, 0, 0, 0, 0, 0};
     init();
 }
 
@@ -95,6 +122,23 @@ void MainFrame::translateCamera(float deltaX, float deltaY) {
 
 void MainFrame::rotateCamera(float deltaYaw, float deltaPitch) {
     _frameGL -> rotateCamera(deltaYaw, deltaPitch);
+}
+
+void MainFrame::handleLeftClick(double mouseX, double mouseY) {
+    int regionId = _frameGL -> pickRegion(
+        static_cast<float>(mouseX), 
+        static_cast<float>(mouseY), 
+        _frameSize
+    );
+    
+    std::shared_ptr<FrameRegionInfo> regionInfoFrame = _imguiFrames.getRegionInfoFrame();
+    if (regionInfoFrame) {
+        if (regionId >= 0) {
+            regionInfoFrame->showRegionInfo(regionId);
+        } else {
+            regionInfoFrame->hideRegionInfo();
+        }
+    }
 }
 
 void MainFrame::init() {

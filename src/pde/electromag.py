@@ -260,6 +260,7 @@ class Electric_Ritz(Electric_2D):
             return [0.5 * (u_x**2 + u_y**2) + 0.5 * (self.k**2 / self.gamma**2) * u**2 - rhs * u]
         
         self.pde = pde
+        
 class Electric_3D(baseclass.BasePDE):
 
     def __init__(self, bbox=[-1, 1, -1, 1, -1, 1], gamma=100.0, frequency = 1e12, Q=1e-9, eps0=8.854e-12, sigma_x=0.3, sigma_y=0.3, sigma_z=0.3, form="sphere"):

@@ -12,7 +12,7 @@ public:
     void addPoint(const glm::vec2 & point);
     void addPoint(const glm::vec3 & point);
     std::vector<glm::vec3> getPoints() { return _points; }
-    std::vector<glm::vec3> createMesh();
+    std::vector<glm::vec3> createMesh() const;
     int getId() const { return _id; }
 private:
     int _id;

@@ -706,10 +706,20 @@ class Model:
                     #model.restore(f"runs/{date_str}-{command_args.name}/0-0/{command_args.iter}.pt")
                     #pde = pde_config()
 
-                    x_range = torch.linspace(self.pde.bbox[0], self.pde.bbox[1], 750)
-                    y_range = torch.linspace(self.pde.bbox[2], self.pde.bbox[3], 750)
-                    xx, yy = torch.meshgrid(x_range, y_range, indexing='ij')
-                    grid_points = torch.stack([xx.reshape(-1), yy.reshape(-1)], dim=1)
+                    # Handle both 2D and 3D geometries
+                    if len(self.pde.bbox) == 4:  # 2D case
+                        x_range = torch.linspace(self.pde.bbox[0], self.pde.bbox[1], 750)
+                        y_range = torch.linspace(self.pde.bbox[2], self.pde.bbox[3], 750)
+                        xx, yy = torch.meshgrid(x_range, y_range, indexing='ij')
+                        grid_points = torch.stack([xx.reshape(-1), yy.reshape(-1)], dim=1)
+                    elif len(self.pde.bbox) == 6:  # 3D case
+                        x_range = torch.linspace(self.pde.bbox[0], self.pde.bbox[1], 75)
+                        y_range = torch.linspace(self.pde.bbox[2], self.pde.bbox[3], 75)
+                        z_range = torch.linspace(self.pde.bbox[4], self.pde.bbox[5], 75)
+                        xx, yy, zz = torch.meshgrid(x_range, y_range, z_range, indexing='ij')
+                        grid_points = torch.stack([xx.reshape(-1), yy.reshape(-1), zz.reshape(-1)], dim=1)
+                    else:
+                        raise ValueError(f"Unsupported bbox dimensions: {len(self.pde.bbox)}")
                     inside_mask = self.pde.geom.inside(grid_points.cpu().numpy())
                     valid_points = grid_points[inside_mask]
                     _ = self.predict(valid_points.cpu().numpy())

@@ -10,10 +10,15 @@
 #include <frame/FrameGL.hpp>
 #include <frame/FramesImGui.hpp>
 
+#define DOUBLE_CLICK_MAX_TIME_DIFF 0.5
+#define DOUBLE_CLICK_MAX_DISTANCE 25.0
 
 struct Event {
     double mousePositionX;
     double mousePositionY;
+    double lastMousePositionX;
+    double lastMousePositionY;
+    double lastClickTime;
     bool rightButtonPressed;
     bool leftButtonPressed;
 };
@@ -32,6 +37,7 @@ public:
     void scaleCamera(float delta);
     void translateCamera(float deltaX, float deltaY);
     void rotateCamera(float deltaYaw, float deltaPitch);
+    void handleLeftClick(double mouseX, double mouseY);
     void run();
 private:
     void init();
@@ -40,9 +46,9 @@ private:
     String _title;
     Size _frameSize;    
     Event _event;
-    FramesImGui & _imguiFrames;
     GLFWwindow * _window;
     FrameGL * _frameGL;
+    FramesImGui & _imguiFrames;
 };
 
 #endif

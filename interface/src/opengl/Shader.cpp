@@ -47,6 +47,11 @@ void Shader::setUniformMatrix(const String & uniform, const glm::mat4 & matrix) 
     glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(matrix));
 }
 
+void Shader::setUniformFloat(const String & uniform, float value) {
+    GLint loc = glGetUniformLocation(_program, uniform.c_str());
+    glUniform1f(loc, value);
+}
+
 void Shader::checkShader(GLuint shader) {
     GLint success;
     GLchar infoLog[512];

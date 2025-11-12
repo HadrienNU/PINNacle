@@ -10,7 +10,8 @@ void FrameResetCamera::render() {
     }
 
     ImGuiIO & io = ImGui::GetIO();
-    ImVec2 windowSize(RESET_CAMERA_BUTTON_WIDTH, RESET_CAMERA_BUTTON_HEIGHT);
+    float scale = io.FontGlobalScale;
+    ImVec2 windowSize(RESET_CAMERA_BUTTON_WIDTH * scale, RESET_CAMERA_BUTTON_HEIGHT * scale);
     ImVec2 windowPos(
         io.DisplaySize.x - windowSize.x,
         io.DisplaySize.y - windowSize.y
@@ -21,11 +22,9 @@ void FrameResetCamera::render() {
 
     ImGui::Begin(
         _title.c_str(), 
-        nullptr,
-        ImGuiWindowFlags_NoResize | 
+        nullptr, 
         ImGuiWindowFlags_NoMove | 
-        ImGuiWindowFlags_NoCollapse |
-        ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoDecoration |
         ImGuiWindowFlags_NoBackground
     );
 
