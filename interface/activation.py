@@ -4,6 +4,8 @@ from sklearn.neighbors import NearestNeighbors, kneighbors_graph
 from sklearn.cluster import AgglomerativeClustering
 from scipy.sparse import coo_matrix
 
+from deepxde import backend as bkd
+
 import numpy as np
 import torch
 import hdbscan
@@ -26,11 +28,13 @@ class ActivationRegionStrategy:
     def init_strategy(self):
         self.activations_output = {
             "tanh": self.tanh_output,
-            "relu": self.relu_output
+            "relu": self.relu_output,
+            "silu": self.silu_output
         }
         self.activations_pattern = {
             "tanh": self.tanh_pattern,
-            "relu": self.relu_pattern
+            "relu": self.relu_pattern,
+            "silu": self.silu_pattern
         }
 
     def get_activation_output(self):
@@ -57,11 +61,16 @@ class ActivationRegionStrategy:
         return torch.tanh(output)
 
     def relu_output(self, output):
-        return (output > 0).int()   
+        return (output > 0).int() 
+
+    def silu_output(self, output):
+        return output / (1 + torch.exp(-output))  
 
     def register_hook(self):
         self.model.net.register_forward_pre_hook(self.get_input())
+        self.model.net.activation = bkd.silu
         self.activation_name = self.model.net.activation.__name__
+        print(f"Activation : {self.activation_name}")
         get_hook = self.get_activation_hook()
         for module in self.model.net.modules():   
             if isinstance(module, torch.nn.modules.linear.Linear):
@@ -132,6 +141,68 @@ class ActivationRegionStrategy:
                 map_region[id_region].append(input_point)
             else:
                 map_region[id_region] = [input_point]
+        return map_region
+    
+    def silu_pattern(self):
+        output = torch.cat(self.output_storage, dim=1)
+        tanh_output = torch.cat(self.activation_storage, dim=1)
+        
+        # Calcul correct de la pente de la fonction SiLU
+        sigmoid_x = torch.sigmoid(output)
+        sigmoid_prime_x = sigmoid_x * (1 - sigmoid_x)
+        tanh_output_slope = sigmoid_x + output * sigmoid_prime_x
+
+        inputs = self.input_storage[0].detach().cpu().numpy()
+        num_inputs = tanh_output.shape[0]
+
+        index = {tuple(inputs[i].tolist()) : i for i in range(num_inputs)}
+        min_dist = float('inf')  # Initialisation correcte de min_dist
+
+        # Fonction de distance
+        def my_distance(x, y):
+            i, j = index[tuple(x.tolist())], index[tuple(y.tolist())]
+            a, b = output[i], output[j]
+            phi_a, phi_b = tanh_output[i], tanh_output[j]
+            phi_da, phi_db = tanh_output_slope[i], tanh_output_slope[j]
+            
+            # Calcul ajusté de la distance pour SiLU
+            distance = 2 * (phi_a - phi_b) + (b - a) * (phi_da + phi_db)
+            
+            # Modification de la distance : Utiliser la norme L2 ou une autre méthode pour gérer la continuité de SiLU
+            dist = torch.norm(distance, p=2).item()  # Utilisation de la norme L2 pour un calcul de distance plus standard
+            
+            nonlocal min_dist  # Utilisation de la variable externe pour suivre la distance minimale
+            min_dist = min(dist, min_dist)  # Mise à jour de min_dist
+            
+            return dist
+
+
+        # Création de la matrice de connectivité
+        connectivity = kneighbors_graph(inputs, n_neighbors=8, include_self=False)
+        connectivity = 0.5 * (connectivity + connectivity.T)
+
+        # Clustering avec la métrique personnalisée
+        clusterer = AgglomerativeClustering(
+            metric=my_distance,
+            n_clusters=None,
+            distance_threshold=1e-7,
+            linkage='single',
+            connectivity=connectivity
+        )
+        labels = clusterer.fit_predict(inputs)
+
+        print("Min distance =", min_dist)
+
+        # Construction de la carte des régions
+        map_region = {}
+        for i in range(num_inputs):
+            input_point = self.input_storage[0][i].tolist()
+            id_region = labels[i].item()
+            if id_region in map_region:
+                map_region[id_region].append(input_point)
+            else:
+                map_region[id_region] = [input_point]
+
         return map_region
 
     def relu_pattern(self):
