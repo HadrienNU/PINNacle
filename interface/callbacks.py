@@ -1,5 +1,5 @@
 from deepxde.callbacks import Callback
-from interface.activation import ActivationRegionStrategy
+from interface.activation_strategy import ActivationRegionStrategy
 
 
 class InterfaceCallback(Callback):
