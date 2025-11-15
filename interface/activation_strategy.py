@@ -1,5 +1,6 @@
 from interface.regions import Regions
 from interface.relu import ReLU
+from interface.silu import SiLU
 
 from sklearn.neighbors import NearestNeighbors, kneighbors_graph
 from sklearn.cluster import AgglomerativeClustering
@@ -23,13 +24,13 @@ class ActivationRegionStrategy:
         self.resolution = 500
         self.dim = len(model.pde.bbox) // 2
         self.init_strategy()        
-        #self.model.net.activation = bkd.silu
+        self.model.net.activation = bkd.silu
 
     def init_strategy(self):
         self.activations_strategy = {
             "tanh": ReLU,
             "relu": ReLU,
-            "silu": ReLU
+            "silu": SiLU
         }
 
     def get_strategy(self, output, index):
@@ -69,7 +70,7 @@ class ActivationRegionStrategy:
         clusterer = AgglomerativeClustering(
             metric=strategy.distance_taylor,
             n_clusters=None,
-            distance_threshold=1e-13,
+            distance_threshold=2.5e-5,
             linkage='single',
             connectivity=connectivity
         )        
