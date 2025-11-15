@@ -9,6 +9,7 @@ from deepxde import backend as bkd
 import numpy as np
 import torch
 import hdbscan
+import matplotlib.pyplot as plt
 
 
 class ActivationRegionStrategy:
@@ -144,64 +145,49 @@ class ActivationRegionStrategy:
         return map_region
     
     def silu_pattern(self):
-        output = torch.cat(self.output_storage, dim=1)
-        tanh_output = torch.cat(self.activation_storage, dim=1)
-        
-        # Calcul correct de la pente de la fonction SiLU
-        sigmoid_x = torch.sigmoid(output)
-        sigmoid_prime_x = sigmoid_x * (1 - sigmoid_x)
-        tanh_output_slope = sigmoid_x + output * sigmoid_prime_x
+        output = torch.cat(self.output_storage, dim=1)  # z
+        phi = torch.cat(self.activation_storage, dim=1) # SiLU(z)
+
+        # dérivée stabilisée
+        z = output.clamp(-40, 40)
+        exp_neg = torch.exp(-z)
+        phi_prime = (1 + (1 + z) * exp_neg) / ((1 + exp_neg) ** 2)
 
         inputs = self.input_storage[0].detach().cpu().numpy()
-        num_inputs = tanh_output.shape[0]
+        num_inputs = phi.shape[0]
 
+        distances = []
         index = {tuple(inputs[i].tolist()) : i for i in range(num_inputs)}
-        min_dist = float('inf')  # Initialisation correcte de min_dist
 
-        # Fonction de distance
         def my_distance(x, y):
             i, j = index[tuple(x.tolist())], index[tuple(y.tolist())]
-            a, b = output[i], output[j]
-            phi_a, phi_b = tanh_output[i], tanh_output[j]
-            phi_da, phi_db = tanh_output_slope[i], tanh_output_slope[j]
-            
-            # Calcul ajusté de la distance pour SiLU
-            distance = 2 * (phi_a - phi_b) + (b - a) * (phi_da + phi_db)
-            
-            # Modification de la distance : Utiliser la norme L2 ou une autre méthode pour gérer la continuité de SiLU
-            dist = torch.norm(distance, p=2).item()  # Utilisation de la norme L2 pour un calcul de distance plus standard
-            
-            nonlocal min_dist  # Utilisation de la variable externe pour suivre la distance minimale
-            min_dist = min(dist, min_dist)  # Mise à jour de min_dist
-            
-            return dist
+            g_i, g_j = phi_prime[i], phi_prime[j]  # "gates" soft
+            delta = g_i - g_j
+            d = torch.sum(delta ** 2).item()
+            distances.append(d)
+            return d
 
-
-        # Création de la matrice de connectivité
         connectivity = kneighbors_graph(inputs, n_neighbors=8, include_self=False)
         connectivity = 0.5 * (connectivity + connectivity.T)
-
-        # Clustering avec la métrique personnalisée
         clusterer = AgglomerativeClustering(
             metric=my_distance,
             n_clusters=None,
-            distance_threshold=1e-7,
+            distance_threshold=4e-6,  # à ajuster
             linkage='single',
-            connectivity=connectivity
+            connectivity=connectivity,
         )
+
         labels = clusterer.fit_predict(inputs)
+        plt.figure()
+        distances.sort()
+        plt.plot(range(len(distances)), distances)
+        plt.savefig("test1.png")
 
-        print("Min distance =", min_dist)
-
-        # Construction de la carte des régions
         map_region = {}
         for i in range(num_inputs):
             input_point = self.input_storage[0][i].tolist()
             id_region = labels[i].item()
-            if id_region in map_region:
-                map_region[id_region].append(input_point)
-            else:
-                map_region[id_region] = [input_point]
+            map_region.setdefault(id_region, []).append(input_point)
 
         return map_region
 
@@ -232,6 +218,7 @@ class ActivationRegionStrategy:
 
         index = {tuple(inputs[i].tolist()) : i for i in range(num_inputs)}
 
+        distances = []
         def my_distance(x, y):
             i, j = index[tuple(x.tolist())], index[tuple(y.tolist())]
             a, b = output[i], output[j]
@@ -239,6 +226,7 @@ class ActivationRegionStrategy:
             phi_da, phi_db = tanh_output[i], tanh_output[j]
             distance = 2 * (phi_a - phi_b) + (b - a) * (phi_da + phi_db) 
             dist = torch.sum(distance ** 2).item()
+            distances.append(dist)
             return dist
 
         connectivity = kneighbors_graph(inputs, n_neighbors=8, include_self=False)
@@ -251,7 +239,14 @@ class ActivationRegionStrategy:
             connectivity=connectivity
         )
         
+        
         labels = clusterer.fit_predict(inputs)
+        plt.figure()
+        distances.sort()
+        plt.plot(range(len(distances)), distances)
+
+        # Sauvegarde (formats possibles : png, pdf, svg, jpg…)
+        plt.savefig("test2.png")
         
         map_region = {}
         for i in range(num_inputs):
