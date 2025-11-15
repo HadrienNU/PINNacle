@@ -20,13 +20,19 @@ Regions RegionReader::read() const {
 
     Region currentRegion(-1);
     int currentIdRegion = -1;
+    int dim;
 
     while (std::getline(regionFile, line)) {
-        if (header) { header = false; continue; }
-
         std::stringstream ss(line);
+        if (header) {
+            String dimStr;
+            std::getline(ss, dimStr, ',');
+            header = false; 
+            dim = std::stoi(dimStr);
+            continue; 
+        }
+        
         String x, y, z, idRegionStr;
-
         std::getline(ss, x, ',');
         std::getline(ss, y, ',');
         std::getline(ss, z, ',');
@@ -36,11 +42,11 @@ Regions RegionReader::read() const {
 
         if (currentIdRegion == -1) {
             currentIdRegion = idRegion;
-            currentRegion = Region(currentIdRegion);
+            currentRegion = Region(currentIdRegion, dim);
         } else if (idRegion != currentIdRegion) {
             regions.push_back(currentRegion);
             currentIdRegion = idRegion;
-            currentRegion = Region(currentIdRegion);
+            currentRegion = Region(currentIdRegion, dim);
         }
 
         glm::vec3 point(std::stof(x), std::stof(y), std::stof(z));

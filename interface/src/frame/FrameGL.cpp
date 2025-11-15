@@ -27,7 +27,7 @@ const float ALPHA_AMPLITUDE = 0.3;
 const float ANIMATION_SPEED = 3.0;
 
 void main() {
-    float alpha = ALPHA_MEAN + ALPHA_AMPLITUDE * sin(alphaPhase * ANIMATION_SPEED);
+    float alpha = ALPHA_MEAN + ALPHA_AMPLITUDE * cos(alphaPhase * ANIMATION_SPEED);
     fragColor = vec4(color, alpha);
 }
 )glsl";

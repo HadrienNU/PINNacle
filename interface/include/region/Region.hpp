@@ -8,7 +8,7 @@
 
 class Region {
 public:
-    Region(int id);
+    Region(int id, int dim = 2);
     void addPoint(const glm::vec2 & point);
     void addPoint(const glm::vec3 & point);
     std::vector<glm::vec3> getPoints() { return _points; }
@@ -16,6 +16,7 @@ public:
     int getId() const { return _id; }
 private:
     int _id;
+    int _dim;
     std::vector<glm::vec3> _points;
 };
 

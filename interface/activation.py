@@ -8,7 +8,6 @@ from deepxde import backend as bkd
 
 import numpy as np
 import torch
-import hdbscan
 import matplotlib.pyplot as plt
 
 
@@ -69,7 +68,7 @@ class ActivationRegionStrategy:
 
     def register_hook(self):
         self.model.net.register_forward_pre_hook(self.get_input())
-        self.model.net.activation = bkd.silu
+        #self.model.net.activation = bkd.silu
         self.activation_name = self.model.net.activation.__name__
         print(f"Activation : {self.activation_name}")
         get_hook = self.get_activation_hook()
