@@ -1,14 +1,13 @@
 from interface.regions import Regions
 from interface.relu import ReLU
 from interface.silu import SiLU
+from interface.tanh import Tanh
 
-from sklearn.neighbors import NearestNeighbors, kneighbors_graph
+from sklearn.neighbors import kneighbors_graph
 from sklearn.cluster import AgglomerativeClustering
-from scipy.sparse import coo_matrix
 
 from deepxde import backend as bkd
 
-import numpy as np
 import torch
 
 
@@ -21,14 +20,16 @@ class ActivationRegionStrategy:
         self.input_storage = []
         self.map_regions_id = {}                
         self.nb_regions = 0
-        self.resolution = 500
-        self.dim = len(model.pde.bbox) // 2
+        self.dim = self.model.pde.geom.dim
+        self.pdetime = len(model.pde.bbox) // 2 > self.dim
+        self.resolution = 500 if self.dim == 2 else 100
+        self.slice_resolution = 10 if self.pdetime else self.resolution
         self.init_strategy()        
         # self.model.net.activation = bkd.silu
 
     def init_strategy(self):
         self.activations_strategy = {
-            "tanh": ReLU,
+            "tanh": Tanh,
             "relu": ReLU,
             "silu": SiLU
         }
@@ -58,13 +59,11 @@ class ActivationRegionStrategy:
             if isinstance(module, torch.nn.modules.linear.Linear):
                 module.register_forward_hook(get_hook)
 
-    def compute_region(self, name):
-        outputs = torch.cat(self.output_storage, dim=1)               
-        inputs = self.input_storage[0].detach().cpu().numpy()
+    def compute_region(self, inputs, outputs, name):
         num_inputs = inputs.shape[0]
         index = {tuple(inputs[i].tolist()) : i for i in range(num_inputs)}
         if self.activation_name == "relu":
-            return self.get_strategy(outputs, index).compute_region(self.input_storage) 
+            return self.get_strategy(outputs, index).compute_region(inputs) 
         
         strategy = self.get_strategy(outputs, index)
         connectivity = kneighbors_graph(inputs, n_neighbors=8, include_self=False)
@@ -92,21 +91,17 @@ class ActivationRegionStrategy:
 
     def evaluate_regions(self):
         self.output_storage.clear()
-        self.input_storage.clear()
-              
-        if self.dim == 2:
-            x_range = torch.linspace(self.model.pde.bbox[0], self.model.pde.bbox[1], self.resolution)
-            y_range = torch.linspace(self.model.pde.bbox[2], self.model.pde.bbox[3], self.resolution)
-            xx, yy = torch.meshgrid(x_range, y_range, indexing='ij')
-            grid_points = torch.stack([xx.reshape(-1), yy.reshape(-1)], dim=1)
-        elif self.dim == 3:
-            self.resolution = 50  # Reduce resolution for 3D to limit memory usage
-            x_range = torch.linspace(self.model.pde.bbox[0], self.model.pde.bbox[1], self.resolution)
-            y_range = torch.linspace(self.model.pde.bbox[2], self.model.pde.bbox[3], self.resolution)
-            z_range = torch.linspace(self.model.pde.bbox[4], self.model.pde.bbox[5], self.resolution)
+        self.input_storage.clear()        
+        x_range = torch.linspace(self.model.pde.bbox[0], self.model.pde.bbox[1], self.resolution)
+        y_range = torch.linspace(self.model.pde.bbox[2], self.model.pde.bbox[3], self.resolution)        
+        if self.dim == 3 or self.dim == 2 and self.pdetime:
+            z_range = torch.linspace(self.model.pde.bbox[4], self.model.pde.bbox[5], self.slice_resolution)
             xx, yy, zz = torch.meshgrid(x_range, y_range, z_range, indexing='ij')
             grid_points = torch.stack([xx.reshape(-1), yy.reshape(-1), zz.reshape(-1)], dim=1)
-        if self.dim > self.model.pde.geom.dim: # Time 
+        elif self.dim == 2 or self.dim == 1 and self.pdetime:            
+            xx, yy = torch.meshgrid(x_range, y_range, indexing='ij')
+            grid_points = torch.stack([xx.reshape(-1), yy.reshape(-1)], dim=1)
+        if self.pdetime: # Time 
             inside_mask = self.model.pde.geom.inside(grid_points[:, :-1].cpu().numpy())
         else:
             inside_mask = self.model.pde.geom.inside(grid_points.cpu().numpy())
@@ -118,7 +113,25 @@ class ActivationRegionStrategy:
         self.evaluate_regions()
         # The last one does not get any activation
         self.output_storage.pop()
-        activation_regions = self.compute_region(name)   
+        outputs = torch.cat(self.output_storage, dim=1)
+        t_column = self.input_storage[0][:, -1] 
+        t_vals = torch.unique(t_column)               
+        inputs = self.input_storage[0].detach().cpu().numpy()        
+        if self.pdetime: # Slices in time
+            activation_regions = {}
+            n = 0
+            for t in t_vals:                
+                t_mask = (t_column == t) 
+                region = self.compute_region(
+                    inputs[t_mask], 
+                    outputs[t_mask], 
+                    f"{name}_t{outputs[t_mask][0][-1]}"
+                )
+                for _, vals in region.items():
+                    n += 1
+                    activation_regions[n] = vals.copy()                    
+        else:
+            activation_regions = self.compute_region(inputs, outputs, name)   
 
         regions = Regions(
             activation_regions,
