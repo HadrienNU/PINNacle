@@ -31,9 +31,6 @@ class Activation:
     
     def export_distances(self, name):
         plt.figure()
-        plt.plot(range(len(self.distances)), self.distances)
-        plt.savefig(f"{name}.png")
-        plt.figure()
         self.distances = sorted(list(self.distances))
         plt.plot(range(len(self.distances)), self.distances)
         plt.savefig(f"{name}_unique.png")
