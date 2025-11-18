@@ -24,7 +24,7 @@ class ActivationRegionStrategy:
         self.resolution = 500
         self.dim = len(model.pde.bbox) // 2
         self.init_strategy()        
-        self.model.net.activation = bkd.silu
+        # self.model.net.activation = bkd.silu
 
     def init_strategy(self):
         self.activations_strategy = {
@@ -59,18 +59,20 @@ class ActivationRegionStrategy:
                 module.register_forward_hook(get_hook)
 
     def compute_region(self, name):
-        outputs = torch.cat(self.output_storage, dim=1)        
+        outputs = torch.cat(self.output_storage, dim=1)               
         inputs = self.input_storage[0].detach().cpu().numpy()
         num_inputs = inputs.shape[0]
         index = {tuple(inputs[i].tolist()) : i for i in range(num_inputs)}
+        if self.activation_name == "relu":
+            return self.get_strategy(outputs, index).compute_region(self.input_storage) 
+        
         strategy = self.get_strategy(outputs, index)
-
         connectivity = kneighbors_graph(inputs, n_neighbors=8, include_self=False)
         connectivity = 0.5 * (connectivity + connectivity.T)
         clusterer = AgglomerativeClustering(
             metric=strategy.distance_taylor,
             n_clusters=None,
-            distance_threshold=2.5e-5,
+            distance_threshold=1e-12,
             linkage='single',
             connectivity=connectivity
         )        
