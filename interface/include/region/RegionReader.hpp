@@ -5,6 +5,17 @@
 #include <region/Region.hpp>
 
 
+struct Header {
+    int dim;
+};
+
+struct Body {
+    float x;
+    float y;
+    float z;
+    int id;
+};
+
 class RegionReader {
 public:
     RegionReader();

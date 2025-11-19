@@ -10,46 +10,41 @@ void RegionReader::setRegionFilePath(const String & regionFilePath) {
 
 Regions RegionReader::read() const {
     Regions regions;
+
     if (_regionFilePath.empty()) return regions;
 
-    std::ifstream regionFile(_regionFilePath);
+    std::ifstream regionFile(_regionFilePath, std::ios::binary);
     if (!regionFile.is_open()) return regions;
 
-    String line;
-    bool header = true;
+    // ---- LECTURE DU HEADER ----
+    Header header;
+    regionFile.read(reinterpret_cast<char*>(&header), sizeof(Header));
+
+    int dim = header.dim;
+
+    // ---- LECTURE DES BODIES ----
+    Body body;
 
     Region currentRegion(-1);
     int currentIdRegion = -1;
-    int dim;
 
-    while (std::getline(regionFile, line)) {
-        std::stringstream ss(line);
-        if (header) {
-            String dimStr;
-            std::getline(ss, dimStr, ',');
-            header = false; 
-            dim = std::stoi(dimStr);
-            continue; 
-        }
-        
-        String x, y, z, idRegionStr;
-        std::getline(ss, x, ',');
-        std::getline(ss, y, ',');
-        std::getline(ss, z, ',');
-        std::getline(ss, idRegionStr, ',');
+    while (regionFile.read(reinterpret_cast<char*>(&body), sizeof(Body))) {
 
-        int idRegion = std::stoi(idRegionStr);
+        int idRegion = body.id;
 
         if (currentIdRegion == -1) {
             currentIdRegion = idRegion;
             currentRegion = Region(currentIdRegion, dim);
-        } else if (idRegion != currentIdRegion) {
+        }
+
+        if (idRegion != currentIdRegion) {
             regions.push_back(currentRegion);
+
             currentIdRegion = idRegion;
             currentRegion = Region(currentIdRegion, dim);
         }
 
-        glm::vec3 point(std::stof(x), std::stof(y), std::stof(z));
+        glm::vec3 point(body.x, body.y, body.z);
         currentRegion.addPoint(point);
     }
 
