@@ -1,12 +1,17 @@
-import numpy as np
 from shapely.geometry import Polygon, LineString, Point
 from scipy.spatial import ConvexHull
+from pathlib import Path
+
 import trimesh
 import csv
-from pathlib import Path
+import numpy as np
+import struct
 
 
 class Regions:
+
+    HEADER_STRUCT = struct.Struct('i')
+    BODY_STRUCT = struct.Struct('fff i')
 
     def __init__(self, map_region: dict[int, list[list[float]]], resolution: float, dim: int = 3):
         self.map_region = map_region
@@ -18,16 +23,18 @@ class Regions:
         regions_triangles = self._compute_regions_triangles()
 
         Path("runs").mkdir(exist_ok=True)
-        filename_csv = Path(f"runs/{filename}.csv")
+        filename_bin = Path(f"runs/{filename}.bin")
 
-        with open(filename_csv, mode='w', newline='', encoding='utf-8') as file:
-            writer = csv.writer(file)
-            writer.writerow([self.dim, '# Dimension'])
+        with open(filename_bin, mode='wb') as file:
+            header_data = self.HEADER_STRUCT.pack(self.dim)
+            file.write(header_data)
 
             for region_id, triangles in regions_triangles.items():
-                for tri in triangles: 
+                for tri in triangles:
                     for vertex in tri:
-                        writer.writerow([vertex[0], vertex[1], vertex[2], region_id])
+                        x, y, z = vertex
+                        data = self.BODY_STRUCT.pack(x, y, z, region_id)
+                        file.write(data)
 
 
     def _compute_regions_triangles(self):

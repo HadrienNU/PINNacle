@@ -5,7 +5,7 @@ import torch
 class Activation:
 
     def __init__(self, activation, pre_activation, index):
-        self.distances = set()
+        self.distances = []
         self.activation = activation
         self.pre_activation = pre_activation
         self.index = index
@@ -31,7 +31,7 @@ class Activation:
     
     def export_distances(self, name):
         plt.figure()
-        self.distances = sorted(list(self.distances))
+        self.distances = sorted(self.distances)
         plt.plot(range(len(self.distances)), self.distances)
         plt.savefig(f"{name}.png")
         
