@@ -6,9 +6,12 @@
 #include <frame/FrameGL.hpp>
 #include <region/RegionReader.hpp>
 #include <frame/FrameInfo.hpp>
+#include <frame/fileSelection/FileObserver.hpp>
 #include <memory>
 #include <filesystem>
 #include <functional>
+#include <thread>
+#include <atomic>
 
 #define FILE_SELECTION_DEFAULT_TITLE "File Selection"
 #define FILE_SELECTION_TITLE "Select CSV File"
@@ -32,6 +35,7 @@
 class FrameFileSelection : public FrameImGui {
 public:
     FrameFileSelection(FrameGL * frameGL, std::shared_ptr<FrameInfo> frameInfo);
+    ~FrameFileSelection();
     void render() override;
 private:
     void loadFile(const String & filename);
@@ -43,6 +47,8 @@ private:
     size_t countRegions(const String & filepath);
     void selectPreviousFile();
     void selectNextFile();
+    void startObserver();
+    void stopObserver();
 private:
     std::shared_ptr<FrameInfo> _frameInfo;
     std::vector<String> _csvFiles;
@@ -51,6 +57,8 @@ private:
     int _selectedFolderIndex;
     RegionReader _regionReader;
     FrameGL * _frameGL;
+    FileObserver _fileObserver;
+    std::atomic<bool> _needsRescan;
 };
 
 #endif

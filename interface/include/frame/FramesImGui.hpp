@@ -5,7 +5,7 @@
 #include <frame/FrameGL.hpp>
 #include <frame/FrameImGui.hpp>
 #include <frame/FrameInfo.hpp>
-#include <frame/FrameFileSelection.hpp>
+#include <frame/fileSelection/FrameFileSelection.hpp>
 #include <frame/FrameCenterCamera.hpp>
 #include <frame/FrameSettings.hpp>
 #include <frame/FrameRegionInfo.hpp>

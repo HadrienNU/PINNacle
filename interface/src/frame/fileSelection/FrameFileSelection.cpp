@@ -1,4 +1,5 @@
-#include <frame/FrameFileSelection.hpp>
+#include <frame/fileSelection/FrameFileSelection.hpp>
+#include <frame/fileSelection/FileObserver.hpp>
 #include <algorithm>
 
 
@@ -7,14 +8,24 @@ FrameFileSelection::FrameFileSelection(FrameGL * frameGL, std::shared_ptr<FrameI
       _frameInfo(frameInfo),
       _selectedFileIndex(FILE_SELECTION_NO_INDEX),
       _selectedFolderIndex(FILE_SELECTION_DEFAULT_FOLDER_INDEX),
-      _frameGL(frameGL) {
+      _frameGL(frameGL),
+      _needsRescan(false) {
     scanFolders();
     scanCSVFiles();
+    startObserver();
+}
+
+FrameFileSelection::~FrameFileSelection() {
+    stopObserver();
 }
 
 void FrameFileSelection::render() {
     if (!_isVisible) {
         return;
+    }
+
+    if (_needsRescan.exchange(false)) {
+        scanCSVFiles();
     }
 
     ImGuiIO & io = ImGui::GetIO();
@@ -47,7 +58,9 @@ void FrameFileSelection::render() {
         FILE_SELECTION_NO_FOLDER,
         [this](int) {
             _selectedFileIndex = FILE_SELECTION_NO_INDEX;
+            stopObserver();
             scanCSVFiles();
+            startObserver();
         }
     );
     
@@ -201,4 +214,14 @@ void FrameFileSelection::selectNextFile() {
     if (isValidFileIndex) {
         loadFile(_csvFiles[_selectedFileIndex]);
     }
+}
+
+void FrameFileSelection::startObserver() {
+    _fileObserver.start(getCurrentFolderPath(), [this]() {
+        _needsRescan = true;
+    });
+}
+
+void FrameFileSelection::stopObserver() {
+    _fileObserver.stop();
 }

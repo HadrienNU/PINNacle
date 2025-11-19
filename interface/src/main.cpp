@@ -1,7 +1,7 @@
 #include <frame/MainFrame.hpp>
 #include <ctime>  
 #include <thread>
-#include <watcher.hpp>
+
 
 #define BACKGROUND_COLOR Color(30, 30, 30)
 #define WINDOW_TITLE "PINNacle Interface"
@@ -15,8 +15,6 @@ int main() {
     FrameGL * frameGL = new FrameGL(BACKGROUND_COLOR);
     FramesImGui imguiFrames(frameGL);
     MainFrame mainFrame(WINDOW_TITLE, {WINDOW_WIDTH, WINDOW_HEIGHT}, frameGL, imguiFrames);
-    std::thread watcherThread(runWatcher, "../runs");
-    watcherThread.detach();
     mainFrame.run();
     delete frameGL;
     return EXIT_SUCCESS;
