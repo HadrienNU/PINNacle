@@ -5,7 +5,7 @@ import torch
 class Activation:
 
     def __init__(self, activation, pre_activation, index):
-        self.distances = set()
+        self.distances = []
         self.activation = activation
         self.pre_activation = pre_activation
         self.index = index
@@ -26,12 +26,23 @@ class Activation:
         phi_da, phi_db = self.phi_grad(a, phi_a), self.phi_grad(b, phi_b)
         distance = 2 * (phi_a - phi_b) + (b - a) * (phi_da + phi_db) 
         dist = torch.sum(distance ** 2).item()
-        self.distances.add(dist)
+        self.distances.append(dist)
         return dist
     
     def export_distances(self, name):
+        # tri des distances
+        distances = sorted(self.distances)
+
+        # CDF : y = i / (N-1)
+        N = len(distances)
+        probabilities = torch.linspace(0, 1, steps=N).tolist()  # 0→1
+
         plt.figure()
-        self.distances = sorted(list(self.distances))
-        plt.plot(range(len(self.distances)), self.distances)
-        plt.savefig(f"{name}.png")
+        plt.plot(distances, probabilities)
+        plt.xlabel("Distance")
+        plt.ylabel("CDF")
+        plt.title("Cumulative Distribution of Distances")
+        plt.grid(True)
+        plt.savefig(f"{name}_cdf.png")
+        plt.close()
         

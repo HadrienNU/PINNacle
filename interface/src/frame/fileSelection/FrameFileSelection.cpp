@@ -109,7 +109,7 @@ void FrameFileSelection::loadFile(const String& filename) {
 
 void FrameFileSelection::scanCSVFiles() {
     _csvFiles.clear();
-    scanDirectory(getCurrentFolderPath(), _csvFiles, true, ".csv");
+    scanDirectory(getCurrentFolderPath(), _csvFiles, true, ".bin");
     std::sort(_csvFiles.begin(), _csvFiles.end(), naturalSort);
 }
 

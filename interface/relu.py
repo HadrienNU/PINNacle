@@ -10,6 +10,8 @@ class ReLU(Activation):
 
     def __init__(self, activation, pre_activation, index):
         super().__init__(activation, pre_activation, index)
+        self.ID_REGION = {}
+        self.NB_REGION = 0
 
     def phi(self, x):
         return torch.clamp(x, min=0)
@@ -20,9 +22,9 @@ class ReLU(Activation):
     def compute_region(self, input_storage):
         grad = self.phi_grad(self.pre_activation, None)
         map_region = {}
-        num_inputs = len(input_storage[0])
+        num_inputs = len(input_storage)
         for i in range(num_inputs):
-            input_point = input_storage[0][i].tolist()
+            input_point = input_storage[i].tolist()
             region = tuple(grad[i].tolist())
             if region not in self.ID_REGION:
                 self.NB_REGION += 1
