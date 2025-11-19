@@ -12,4 +12,5 @@ class SiLU(Activation):
         return x * torch.sigmoid(x)
     
     def phi_grad(self, x, phi):
-        return phi * (1 + x * (1 - phi))
+        sigmoid = torch.sigmoid(x)
+        return sigmoid * (1 + x * (1 - sigmoid))

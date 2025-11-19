@@ -25,7 +25,7 @@ class ActivationRegionStrategy:
         self.resolution = 500 if self.dim == 2 else 100
         self.slice_resolution = 10 if self.pdetime else self.resolution
         self.init_strategy()        
-        # self.model.net.activation = bkd.silu
+        self.model.net.activation = bkd.silu
 
     def init_strategy(self):
         self.activations_strategy = {
@@ -71,7 +71,7 @@ class ActivationRegionStrategy:
         clusterer = AgglomerativeClustering(
             metric=strategy.distance_taylor,
             n_clusters=None,
-            distance_threshold=1e-12,
+            distance_threshold=1e-14,
             linkage='single',
             connectivity=connectivity
         )        
