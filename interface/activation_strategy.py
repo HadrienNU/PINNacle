@@ -3,7 +3,7 @@ from interface.relu import ReLU
 from interface.silu import SiLU
 from interface.tanh import Tanh
 
-from sklearn.neighbors import kneighbors_graph
+from sklearn.neighbors import kneighbors_graph, NearestNeighbors
 from sklearn.cluster import AgglomerativeClustering
 
 from deepxde import backend as bkd
@@ -13,7 +13,7 @@ import torch
 
 class ActivationRegionStrategy:
 
-    def __init__(self, model, register_ready):
+    def __init__(self, model, register_ready, resolution, slice_resolution):
         self.model = model
         self.register_ready = register_ready
         self.output_storage = []
@@ -22,10 +22,11 @@ class ActivationRegionStrategy:
         self.nb_regions = 0
         self.dim = self.model.pde.geom.dim
         self.pdetime = len(model.pde.bbox) // 2 > self.dim
-        self.resolution = 500 if self.dim == 2 else 100
-        self.slice_resolution = 10 if self.pdetime else self.resolution
+        self.resolution = resolution if self.dim == 2 else resolution / 5
+        self.slice_resolution = slice_resolution if self.pdetime else self.resolution
+        self.pdistance_threshold = 0.5
         self.init_strategy()        
-        self.model.net.activation = bkd.silu
+        # self.model.net.activation = bkd.silu
 
     def init_strategy(self):
         self.activations_strategy = {
@@ -62,16 +63,24 @@ class ActivationRegionStrategy:
     def compute_region(self, inputs, outputs, name):
         num_inputs = inputs.shape[0]
         index = {tuple(inputs[i].tolist()) : i for i in range(num_inputs)}
-        if self.activation_name == "relu":
-            return self.get_strategy(outputs, index).compute_region(inputs) 
-        
+        # if self.activation_name == "relu":
+        #     return self.get_strategy(outputs, index).compute_region(inputs) 
+
+        k = 8
         strategy = self.get_strategy(outputs, index)
-        connectivity = kneighbors_graph(inputs, n_neighbors=8, include_self=False)
+        connectivity = kneighbors_graph(inputs, n_neighbors=k, include_self=False)
+        for i in range(num_inputs):
+            neighbors = connectivity[i].indices
+            for j in neighbors:
+                strategy.distance_custom(inputs[i], inputs[j])
+
         connectivity = 0.5 * (connectivity + connectivity.T)
+        distance_threshold = strategy.get_distance(self.pdistance_threshold)
+        print("distance_threshold :", distance_threshold)
         clusterer = AgglomerativeClustering(
-            metric=strategy.distance_taylor,
+            metric=strategy.distance_custom,
             n_clusters=None,
-            distance_threshold=1e-14,
+            distance_threshold=distance_threshold,
             linkage='single',
             connectivity=connectivity
         )        
@@ -86,7 +95,7 @@ class ActivationRegionStrategy:
             else:
                 map_region[id_region] = [input_point]
 
-        strategy.export_distances(name)
+        # strategy.export_distances(name)
         return map_region
 
     def evaluate_regions(self):
@@ -108,28 +117,32 @@ class ActivationRegionStrategy:
         valid_points = grid_points[inside_mask]
         _ = self.model.predict(valid_points.cpu().numpy())
 
+    def compute_region_time(self, inputs, outputs, name):
+        t_column = self.input_storage[0][:, -1] 
+        t_vals = torch.unique(t_column)
+        activation_regions = {}
+        n = 0
+        for t in t_vals:                
+            t_mask = (t_column == t) 
+            region = self.compute_region(
+                inputs[t_mask], 
+                outputs[t_mask], 
+                f"{name}_t{outputs[t_mask][0][-1]}"
+            )
+            for _, vals in region.items():
+                n += 1
+                activation_regions[n] = vals.copy()
+        return activation_regions
+
     def export_regions(self, epoch, date):
         name = f"{date}-epoch{epoch}"
         self.evaluate_regions()
         # The last one does not get any activation
         self.output_storage.pop()
-        outputs = torch.cat(self.output_storage, dim=1)
-        t_column = self.input_storage[0][:, -1] 
-        t_vals = torch.unique(t_column)               
+        outputs = torch.cat(self.output_storage, dim=1)     
         inputs = self.input_storage[0].detach().cpu().numpy()        
         if self.pdetime: # Slices in time
-            activation_regions = {}
-            n = 0
-            for t in t_vals:                
-                t_mask = (t_column == t) 
-                region = self.compute_region(
-                    inputs[t_mask], 
-                    outputs[t_mask], 
-                    f"{name}_t{outputs[t_mask][0][-1]}"
-                )
-                for _, vals in region.items():
-                    n += 1
-                    activation_regions[n] = vals.copy()                    
+            activation_regions = self.compute_region_time(inputs, outputs, name)                      
         else:
             activation_regions = self.compute_region(inputs, outputs, name)   
 

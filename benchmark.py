@@ -79,6 +79,8 @@ if __name__ == "__main__":
     parser.add_argument('--plot-every', type=int, default=2000)
     parser.add_argument('--repeat', type=int, default=1)
     parser.add_argument('--method', type=str, default="adam")
+    parser.add_argument('--resolution', type=int, default=500)
+    parser.add_argument('--slice_resolution', type=int, default=10)
 
     command_args = parser.parse_args()
 
@@ -198,7 +200,12 @@ if __name__ == "__main__":
                     #TesterCallback(log_every=command_args.log_every),
                     #PlotCallback(log_every=command_args.plot_every, fast=True),
                     #LossCallback(verbose=True),
-                    InterfaceCallback(date=date_str, log_every=command_args.log_every),
+                    InterfaceCallback(
+                        date=date_str, 
+                        resolution=command_args.resolution,
+                        slice_resolution=command_args.slice_resolution,
+                        log_every=command_args.log_every
+                    ),
                 ]
             }
         )

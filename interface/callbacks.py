@@ -4,11 +4,13 @@ from interface.activation_strategy import ActivationRegionStrategy
 
 class InterfaceCallback(Callback):
 
-    def __init__(self, date, log_every=None):
+    def __init__(self, date, resolution, slice_resolution, log_every=None):
         super(InterfaceCallback, self).__init__()
         self.log_every = log_every        
         self.date = date     
         self.epoch = 0   
+        self.resolution = resolution
+        self.slice_resolution = slice_resolution
 
     def register_ready(self):
         return self.epoch % self.log_every == 0     
@@ -34,7 +36,10 @@ class InterfaceCallback(Callback):
     def on_train_begin(self):
         if self.log_every is None:
             self.log_every = self.model.display_every
-        self.activation_region = ActivationRegionStrategy(self.model, self.register_ready)
+        self.activation_region = ActivationRegionStrategy(
+            self.model, self.register_ready,
+            self.resolution, self.slice_resolution
+        )
         self.activation_region.register_hook()
 
     def on_train_end(self):
