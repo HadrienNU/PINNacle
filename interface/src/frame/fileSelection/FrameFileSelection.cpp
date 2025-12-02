@@ -9,7 +9,8 @@ FrameFileSelection::FrameFileSelection(FrameGL * frameGL, std::shared_ptr<FrameI
       _selectedFileIndex(FILE_SELECTION_NO_INDEX),
       _selectedFolderIndex(FILE_SELECTION_DEFAULT_FOLDER_INDEX),
       _frameGL(frameGL),
-      _needsRescan(false) {
+      _needsRescan(false),
+      _autoSelectLatest(false) {
     scanFolders();
     scanBINFiles();
     startObserver();
@@ -26,6 +27,9 @@ void FrameFileSelection::render() {
 
     if (_needsRescan.exchange(false)) {
         scanBINFiles();
+        if (_autoSelectLatest) {
+            selectLatestFile();
+        }
     }
 
     ImGuiIO & io = ImGui::GetIO();
@@ -70,16 +74,16 @@ void FrameFileSelection::render() {
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - buttonsWidth - spacing);
     renderComboBox(
         "##bincombo",
-        _csvFiles,
+        _binFiles,
         _selectedFileIndex,
         FILE_SELECTION_NO_FILE,
         [this](int index) {
-            loadFile(_csvFiles[index]);
+            loadFile(_binFiles[index]);
         }
     );
     
     ImGui::SameLine();
-    ImGui::BeginDisabled(_csvFiles.empty());
+    ImGui::BeginDisabled(_binFiles.empty());
     if (ImGui::ArrowButton("##leftfile", ImGuiDir_Left)) {
         selectPreviousFile();
     }
@@ -88,6 +92,9 @@ void FrameFileSelection::render() {
         selectNextFile();
     }
     ImGui::EndDisabled();
+
+    ImGui::Spacing();
+    ImGui::Checkbox(FILE_SELECTION_AUTO_SELECT_LABEL, &_autoSelectLatest);
 
     ImGui::End();
 }
@@ -108,9 +115,9 @@ void FrameFileSelection::loadFile(const String& filename) {
 }
 
 void FrameFileSelection::scanBINFiles() {
-    _csvFiles.clear();
-    scanDirectory(getCurrentFolderPath(), _csvFiles, true, ".bin");
-    std::sort(_csvFiles.begin(), _csvFiles.end(), naturalSort);
+    _binFiles.clear();
+    scanDirectory(getCurrentFolderPath(), _binFiles, true, ".bin");
+    std::sort(_binFiles.begin(), _binFiles.end(), naturalSort);
 }
 
 void FrameFileSelection::scanFolders() {
@@ -179,40 +186,40 @@ String FrameFileSelection::getCurrentFolderPath() const {
 }
 
 void FrameFileSelection::selectPreviousFile() {
-    if (_csvFiles.empty()) {
+    if (_binFiles.empty()) {
         return;
     }
 
     bool notFileSelected = _selectedFileIndex < 0;
     bool isFirstFileSelected = _selectedFileIndex == 0;
     if (notFileSelected || isFirstFileSelected) {
-        _selectedFileIndex = static_cast<int>(_csvFiles.size()) - 1;
+        _selectedFileIndex = static_cast<int>(_binFiles.size()) - 1;
     } else {
         _selectedFileIndex--;
     }
 
-    bool isValidFileIndex = _selectedFileIndex >= 0 && _selectedFileIndex < static_cast<int>(_csvFiles.size());
+    bool isValidFileIndex = _selectedFileIndex >= 0 && _selectedFileIndex < static_cast<int>(_binFiles.size());
     if (isValidFileIndex) {
-        loadFile(_csvFiles[_selectedFileIndex]);
+        loadFile(_binFiles[_selectedFileIndex]);
     }
 }
 
 void FrameFileSelection::selectNextFile() {
-    if (_csvFiles.empty()) {
+    if (_binFiles.empty()) {
         return;
     }
 
     bool notFileSelected = _selectedFileIndex < 0;
-    bool isLastFileSelected = _selectedFileIndex >= static_cast<int>(_csvFiles.size()) - 1;
+    bool isLastFileSelected = _selectedFileIndex >= static_cast<int>(_binFiles.size()) - 1;
     if (notFileSelected || isLastFileSelected) {
         _selectedFileIndex = 0;
     } else {
         _selectedFileIndex++;
     }
 
-    bool isValidFileIndex = _selectedFileIndex >= 0 && _selectedFileIndex < static_cast<int>(_csvFiles.size());
+    bool isValidFileIndex = _selectedFileIndex >= 0 && _selectedFileIndex < static_cast<int>(_binFiles.size());
     if (isValidFileIndex) {
-        loadFile(_csvFiles[_selectedFileIndex]);
+        loadFile(_binFiles[_selectedFileIndex]);
     }
 }
 
@@ -224,4 +231,13 @@ void FrameFileSelection::startObserver() {
 
 void FrameFileSelection::stopObserver() {
     _fileObserver.stop();
+}
+
+void FrameFileSelection::selectLatestFile() {
+    if (_binFiles.empty()) {
+        return;
+    }
+
+    _selectedFileIndex = static_cast<int>(_binFiles.size()) - 1;
+    loadFile(_binFiles[_selectedFileIndex]);
 }
