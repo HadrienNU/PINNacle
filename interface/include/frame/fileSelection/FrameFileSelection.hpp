@@ -14,12 +14,12 @@
 #include <atomic>
 
 #define FILE_SELECTION_DEFAULT_TITLE "File Selection"
-#define FILE_SELECTION_TITLE "Select CSV File"
+#define FILE_SELECTION_TITLE "Select BIN File"
 
 #define FILE_SELECTION_FOLDER_LABEL "Folder:"
 #define FILE_SELECTION_NO_FOLDER "No folder selected"
 
-#define FILE_SELECTION_FILE_LABEL "CSV File:"
+#define FILE_SELECTION_FILE_LABEL "BIN File:"
 #define FILE_SELECTION_NO_FILE "No file selected"
 
 #define FILE_SELECTION_RUNS_PATH "../runs/"
@@ -39,7 +39,7 @@ public:
     void render() override;
 private:
     void loadFile(const String & filename);
-    void scanCSVFiles();
+    void scanBINFiles();
     void scanFolders();
     void scanDirectory(const String & path, std::vector<String> & results, bool filesOnly, const String & extension = "");
     void renderComboBox(const char * comboId, const std::vector<String> & items, int & selectedIndex, const char * noSelectionText, std::function<void(int)> onSelectionChanged = nullptr);

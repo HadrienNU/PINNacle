@@ -11,7 +11,7 @@ FrameFileSelection::FrameFileSelection(FrameGL * frameGL, std::shared_ptr<FrameI
       _frameGL(frameGL),
       _needsRescan(false) {
     scanFolders();
-    scanCSVFiles();
+    scanBINFiles();
     startObserver();
 }
 
@@ -25,7 +25,7 @@ void FrameFileSelection::render() {
     }
 
     if (_needsRescan.exchange(false)) {
-        scanCSVFiles();
+        scanBINFiles();
     }
 
     ImGuiIO & io = ImGui::GetIO();
@@ -59,7 +59,7 @@ void FrameFileSelection::render() {
         [this](int) {
             _selectedFileIndex = FILE_SELECTION_NO_INDEX;
             stopObserver();
-            scanCSVFiles();
+            scanBINFiles();
             startObserver();
         }
     );
@@ -69,7 +69,7 @@ void FrameFileSelection::render() {
     ImGui::Text("%s", FILE_SELECTION_FILE_LABEL);
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - buttonsWidth - spacing);
     renderComboBox(
-        "##csvcombo",
+        "##bincombo",
         _csvFiles,
         _selectedFileIndex,
         FILE_SELECTION_NO_FILE,
@@ -107,7 +107,7 @@ void FrameFileSelection::loadFile(const String& filename) {
     _frameGL->setRegions(regions);
 }
 
-void FrameFileSelection::scanCSVFiles() {
+void FrameFileSelection::scanBINFiles() {
     _csvFiles.clear();
     scanDirectory(getCurrentFolderPath(), _csvFiles, true, ".bin");
     std::sort(_csvFiles.begin(), _csvFiles.end(), naturalSort);

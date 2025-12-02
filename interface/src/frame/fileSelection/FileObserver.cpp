@@ -58,7 +58,7 @@ void FileObserver::watchLoop() {
                     folder, 
                     std::filesystem::directory_options::skip_permission_denied
                 )) {
-                    if (entry.is_regular_file() && entry.path().extension() == ".csv") {
+                    if (entry.is_regular_file() && entry.path().extension() == ".bin") {
                         currentFiles.insert(entry.path());
                     }
                 }
