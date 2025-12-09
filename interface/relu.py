@@ -5,13 +5,8 @@ import torch
 
 class ReLU(Activation):
 
-    ID_REGION = {}
-    NB_REGION = 0
-
     def __init__(self, activation, pre_activation, index):
         super().__init__(activation, pre_activation, index)
-        self.ID_REGION = {}
-        self.NB_REGION = 0
 
     def phi(self, x):
         return torch.clamp(x, min=0)

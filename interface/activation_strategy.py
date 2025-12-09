@@ -26,7 +26,7 @@ class ActivationRegionStrategy:
         self.slice_resolution = slice_resolution if self.pdetime else self.resolution
         self.pdistance_threshold = 0.5
         self.init_strategy()        
-        # self.model.net.activation = bkd.silu
+        # self.model.net.activation = bkd.tanh
 
     def init_strategy(self):
         self.activations_strategy = {
@@ -63,8 +63,9 @@ class ActivationRegionStrategy:
     def compute_region(self, inputs, outputs, name):
         num_inputs = inputs.shape[0]
         index = {tuple(inputs[i].tolist()) : i for i in range(num_inputs)}
-        # if self.activation_name == "relu":
-        #     return self.get_strategy(outputs, index).compute_region(inputs) 
+        res = self.get_strategy(outputs, index).compute_region(inputs) 
+        if res is not None:
+            return res
 
         k = 8
         strategy = self.get_strategy(outputs, index)
