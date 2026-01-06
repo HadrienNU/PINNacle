@@ -26,7 +26,7 @@ class ActivationRegionStrategy:
         self.slice_resolution = slice_resolution if self.pdetime else self.resolution
         self.pdistance_threshold = 0.5
         self.init_strategy()        
-        # self.model.net.activation = bkd.tanh
+        #self.model.net.activation = bkd.tanh
 
     def init_strategy(self):
         self.activations_strategy = {

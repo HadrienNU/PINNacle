@@ -109,6 +109,14 @@ class Activation:
         assert n > 1
 
         x_flat, _ = x.flatten().sort()
+        max_samples = 10_000
+        if len(x_flat) > max_samples:
+            random_indices = torch.randint(
+                0, x_flat.shape[0], 
+                (max_samples,), device=x.device
+            )
+            x_flat = x_flat[random_indices]
+
         quantiles = torch.tensor([(i / n) for i in range(1, n)], device=x.device)
         quantiles = (quantiles * x_flat.shape[0]).int()
         thresholds = x_flat[quantiles]
