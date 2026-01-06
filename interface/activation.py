@@ -6,6 +6,7 @@ class Activation:
 
     ID_REGION = {}
     NB_REGION = 0
+    N_SAMPLES = 5_000
 
     def __init__(self, activation, pre_activation, index, region_number=2):
         self.distances = []
@@ -69,9 +70,9 @@ class Activation:
         d = distances[i0] * (1 - t) + distances[i1] * t
         return d
     
-    def export_splitted_region(self, thresholds):
-        n_sample = 1000
-        pre_activation = self.pre_activation.flatten()
+    def export_splitted_region(self, thresholds, pre_activation_layer, layer_depth):
+        n_sample = self.N_SAMPLES
+        pre_activation = pre_activation_layer.flatten()
         random_indices = torch.randint(
             0, pre_activation.shape[0], 
             (n_sample,), device=pre_activation.device
@@ -101,34 +102,43 @@ class Activation:
         plt.title("Splitted Regions")
         plt.legend()
         plt.grid(True)
-        plt.savefig(f"splitted_region_{self.activation.__name__}.png")
+        plt.savefig(f"splitted_region_layer{layer_depth}_{self.activation.__name__}.png")
         plt.close()
     
-    def split_region(self, x):
+    def split_region(self, x):        
         n = self.region_number
         assert n > 1
 
-        x_flat, _ = x.flatten().sort()
-        max_samples = 10_000
-        if len(x_flat) > max_samples:
-            random_indices = torch.randint(
-                0, x_flat.shape[0], 
-                (max_samples,), device=x.device
-            )
-            x_flat = x_flat[random_indices]
+        results = []
+        layer_depth = 0
+        for layer in x:
+            pre_activation_layer = layer
+            layer = self.phi(layer)
+            result = torch.zeros_like(layer, dtype=torch.long)
+            x_flat, _ = layer.flatten().sort()
+            max_samples = self.N_SAMPLES
+            if len(x_flat) > max_samples:
+                random_indices = torch.randint(
+                    0, x_flat.shape[0], 
+                    (max_samples,), device=layer.device
+                )
+                x_flat = x_flat[random_indices]
 
-        quantiles = torch.tensor([(i / n) for i in range(1, n)], device=x.device)
-        quantiles = (quantiles * x_flat.shape[0]).int()
-        thresholds = x_flat[quantiles]
-        result = torch.zeros_like(x, dtype=torch.long)
-        for th in thresholds:
-            result += (x >= th).long()
-        self.export_splitted_region(thresholds)
-        return result
+            quantiles = torch.tensor([(i / n) for i in range(1, n)], device=layer.device)
+            quantiles = (quantiles * x_flat.shape[0]).int()
+            thresholds = x_flat[quantiles]
+            
+            for th in thresholds:
+                result += (layer >= th).long()
+            self.export_splitted_region(thresholds, pre_activation_layer, layer_depth)
+            results.append(result)
+            layer_depth += 1
+        
+        regions = torch.cat(results, dim=1)
+        return regions
 
-    def compute_region(self, input_storage):
-        post_activation = self.phi(self.pre_activation)
-        grad = self.split_region(post_activation)
+    def compute_region(self, input_storage, pre_activation):
+        grad = self.split_region(pre_activation)
         map_region = {}
         num_inputs = len(input_storage)
         for i in range(num_inputs):

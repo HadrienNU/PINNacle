@@ -6,7 +6,7 @@ import torch
 class Tanh(Activation):
 
     def __init__(self, activation, pre_activation, index):
-        super().__init__(activation, pre_activation, index)
+        super().__init__(activation, pre_activation, index, 3)
 
     def phi(self, x):
         return torch.tanh(x)

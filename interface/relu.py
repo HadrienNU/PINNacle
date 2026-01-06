@@ -14,7 +14,7 @@ class ReLU(Activation):
     def phi_grad(self, x, phi):
         return (x > 0).int()
     
-    def compute_region(self, input_storage):
+    def compute_region(self, input_storage, pre_activation=None):
         grad = self.phi_grad(self.pre_activation, None)
         map_region = {}
         num_inputs = len(input_storage)
