@@ -18,15 +18,14 @@ class ActivationRegionStrategy:
         self.register_ready = register_ready
         self.output_storage = []
         self.input_storage = []
-        self.map_regions_id = {}                
-        self.nb_regions = 0
+        self.map_regions_id = {}   
         self.dim = self.model.pde.geom.dim
         self.pdetime = len(model.pde.bbox) // 2 > self.dim
         self.resolution = resolution if self.dim == 2 else resolution / 5
         self.slice_resolution = slice_resolution if self.pdetime else self.resolution
         self.pdistance_threshold = 0.5
         self.init_strategy()        
-        self.model.net.activation = bkd.tanh
+        #self.model.net.activation = bkd.tanh
 
     def init_strategy(self):
         self.activations_strategy = {
@@ -64,7 +63,7 @@ class ActivationRegionStrategy:
         num_inputs = inputs.shape[0]
         index = {tuple(inputs[i].tolist()) : i for i in range(num_inputs)}
         strategy = self.get_strategy(outputs, index)
-        res = strategy.compute_region(inputs, self.output_storage) 
+        res = strategy.compute_region(inputs, self.output_storage, self.map_regions_id) 
         if res is not None:
             return res
 

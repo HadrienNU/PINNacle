@@ -4,9 +4,7 @@ import torch
 
 class Activation:
 
-    ID_REGION = {}
-    NB_REGION = 0
-    N_SAMPLES = 5_000
+    N_SAMPLES = 10_000
 
     def __init__(self, activation, pre_activation, index, region_number=2):
         self.distances = []
@@ -14,8 +12,6 @@ class Activation:
         self.pre_activation = pre_activation
         self.index = index
         self.distances_mem = {}
-        self.ID_REGION = {}
-        self.NB_REGION = 0
         self.region_number = region_number
     
     def phi(self, x):
@@ -114,22 +110,13 @@ class Activation:
         for layer in x:
             pre_activation_layer = layer
             layer = self.phi(layer)
-            result = torch.zeros_like(layer, dtype=torch.long)
+            result = torch.zeros_like(layer, dtype=torch.int)
             x_flat, _ = layer.flatten().sort()
-            max_samples = self.N_SAMPLES
-            if len(x_flat) > max_samples:
-                random_indices = torch.randint(
-                    0, x_flat.shape[0], 
-                    (max_samples,), device=layer.device
-                )
-                x_flat = x_flat[random_indices]
-
             quantiles = torch.tensor([(i / n) for i in range(1, n)], device=layer.device)
             quantiles = (quantiles * x_flat.shape[0]).int()
-            thresholds = x_flat[quantiles]
-            
+            thresholds = x_flat[quantiles]            
             for th in thresholds:
-                result += (layer >= th).long()
+                result += (layer > th.item()).int()
             self.export_splitted_region(thresholds, pre_activation_layer, layer_depth)
             results.append(result)
             layer_depth += 1
@@ -137,17 +124,18 @@ class Activation:
         regions = torch.cat(results, dim=1)
         return regions
 
-    def compute_region(self, input_storage, pre_activation):
+    def compute_region(self, input_storage, pre_activation, map_regions_id):
         grad = self.split_region(pre_activation)
         map_region = {}
+        nb_region = len(map_regions_id)
         num_inputs = len(input_storage)
         for i in range(num_inputs):
             input_point = input_storage[i].tolist()
             region = tuple(grad[i].tolist())
-            if region not in self.ID_REGION:
-                self.NB_REGION += 1
-                self.ID_REGION[region] = self.NB_REGION
-            id_region = self.ID_REGION[region]
+            if region not in map_regions_id:   
+                nb_region += 1             
+                map_regions_id[region] = nb_region              
+            id_region = map_regions_id[region]
             if id_region in map_region:
                 map_region[id_region].append(input_point)
             else:
