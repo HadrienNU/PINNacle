@@ -7,16 +7,20 @@ import csv
 import numpy as np
 import struct
 
+from .statistics import compute_all_statistics, pack_statistics
+
 
 class Regions:
 
     HEADER_STRUCT = struct.Struct('i')
     BODY_STRUCT = struct.Struct('fff i')
 
-    def __init__(self, map_region: dict[int, list[list[float]]], resolution: float, dim: int = 3):
+    def __init__(self, map_region: dict[int, list[list[float]]], resolution: float, dim: int = 3, compute_stats: bool = False, stats_params: dict = None):
         self.map_region = map_region
         self.resolution = resolution
         self.dim = dim
+        self.compute_stats = compute_stats
+        self.stats_params = stats_params if stats_params is not None else {}
 
     def export(self, filename: str):
         """Export all regions as triangles (x, y, z, class)."""
@@ -35,6 +39,11 @@ class Regions:
                         x, y, z = vertex
                         data = self.BODY_STRUCT.pack(x, y, z, region_id)
                         file.write(data)
+            
+            if self.compute_stats:
+                stats = compute_all_statistics(regions_triangles, self.stats_params)
+                stats_bytes = pack_statistics(stats)
+                file.write(stats_bytes)
 
 
     def _compute_regions_triangles(self):
