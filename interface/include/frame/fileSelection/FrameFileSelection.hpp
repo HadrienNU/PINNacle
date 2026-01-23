@@ -26,11 +26,15 @@
 #define FILE_SELECTION_FOLDER_PREFIX "runs/"
 
 #define FILE_SELECTION_WINDOW_WIDTH 300.0f
-#define FILE_SELECTION_WINDOW_HEIGHT 165.0f
+#define FILE_SELECTION_WINDOW_HEIGHT 190.0f
 
 #define FILE_SELECTION_NO_INDEX -1
 #define FILE_SELECTION_DEFAULT_FOLDER_INDEX 0
 #define FILE_SELECTION_AUTO_SELECT_LABEL "Auto-select latest file"
+
+#define FILE_SELECTION_ANIMATION_LABEL "Animate"
+#define FILE_SELECTION_ANIMATION_MIN_DURATION 1000
+#define FILE_SELECTION_ANIMATION_MAX_DURATION 5000
 
 
 class FrameFileSelection : public FrameImGui {
@@ -51,6 +55,8 @@ private:
     void startObserver();
     void stopObserver();
     void selectLatestFile();
+    void startAnimation();
+    void stopAnimation();
 private:
     std::shared_ptr<FrameInfo> _frameInfo;
     std::vector<String> _binFiles;
@@ -62,6 +68,11 @@ private:
     FileObserver _fileObserver;
     std::atomic<bool> _needsRescan;
     bool _autoSelectLatest;
+    bool _animate;
+    std::atomic<int> _animationDuration; 
+    std::atomic<bool> _animationRunning;
+    std::atomic<bool> _advanceRequested;
+    std::thread _animationThread;
 };
 
 #endif

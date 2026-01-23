@@ -1,6 +1,7 @@
 #include <frame/fileSelection/FrameFileSelection.hpp>
 #include <frame/fileSelection/FileObserver.hpp>
 #include <algorithm>
+#include <chrono>
 
 
 FrameFileSelection::FrameFileSelection(FrameGL * frameGL, std::shared_ptr<FrameInfo> frameInfo)
@@ -10,13 +11,18 @@ FrameFileSelection::FrameFileSelection(FrameGL * frameGL, std::shared_ptr<FrameI
       _selectedFolderIndex(FILE_SELECTION_DEFAULT_FOLDER_INDEX),
       _frameGL(frameGL),
       _needsRescan(false),
-      _autoSelectLatest(false) {
+      _autoSelectLatest(false),
+      _animate(false),
+      _animationDuration(FILE_SELECTION_ANIMATION_MIN_DURATION),
+      _animationRunning(false),
+      _advanceRequested(false) {
     scanFolders();
     scanBINFiles();
     startObserver();
 }
 
 FrameFileSelection::~FrameFileSelection() {
+    stopAnimation();
     stopObserver();
 }
 
@@ -30,6 +36,10 @@ void FrameFileSelection::render() {
         if (_autoSelectLatest) {
             selectLatestFile();
         }
+    }
+
+    if (_advanceRequested.exchange(false)) {
+        selectNextFile();
     }
 
     ImGuiIO & io = ImGui::GetIO();
@@ -95,6 +105,21 @@ void FrameFileSelection::render() {
 
     ImGui::Spacing();
     ImGui::Checkbox(FILE_SELECTION_AUTO_SELECT_LABEL, &_autoSelectLatest);
+
+    ImGui::Spacing();
+    bool prevAnimate = _animate;
+    if (ImGui::Checkbox(FILE_SELECTION_ANIMATION_LABEL, &_animate)) {
+        if (_animate && !prevAnimate) {
+            startAnimation();
+        } else if (!_animate && prevAnimate) {
+            stopAnimation();
+        }
+    }
+    ImGui::SameLine();
+    int duration = _animationDuration.load();
+    if (ImGui::SliderInt("##animationDuration", &duration, FILE_SELECTION_ANIMATION_MIN_DURATION, FILE_SELECTION_ANIMATION_MAX_DURATION, "%d ms")) {
+        _animationDuration.store(duration);
+    }
 
     ImGui::End();
 }
@@ -231,6 +256,27 @@ void FrameFileSelection::startObserver() {
 
 void FrameFileSelection::stopObserver() {
     _fileObserver.stop();
+}
+
+void FrameFileSelection::startAnimation() {
+    if (_animationRunning.load()) return;
+    _animationRunning.store(true);
+    _animationThread = std::thread([this]() {
+        while (_animationRunning.load()) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(_animationDuration.load()));
+            if (!_animationRunning.load()) break;
+            _advanceRequested.store(true);
+        }
+    });
+}
+
+void FrameFileSelection::stopAnimation() {
+    if (!_animationRunning.load()) return;
+    _animationRunning.store(false);
+    if (_animationThread.joinable()) {
+        _animationThread.join();
+    }
+    _advanceRequested.store(false);
 }
 
 void FrameFileSelection::selectLatestFile() {
