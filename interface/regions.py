@@ -14,6 +14,7 @@ class Regions:
 
     HEADER_STRUCT = struct.Struct('i')
     BODY_STRUCT = struct.Struct('fff i')
+    STATS_MARKER = -999999999 # Unique marker for statistics section
 
     def __init__(self, map_region: dict[int, list[list[float]]], resolution: float, dim: int = 3, compute_stats: bool = False, stats_params: dict = None):
         self.map_region = map_region
@@ -33,14 +34,18 @@ class Regions:
             header_data = self.HEADER_STRUCT.pack(self.dim)
             file.write(header_data)
 
+            total_vertices = 0
             for region_id, triangles in regions_triangles.items():
                 for tri in triangles:
                     for vertex in tri:
                         x, y, z = vertex
                         data = self.BODY_STRUCT.pack(x, y, z, region_id)
                         file.write(data)
-            
+                        total_vertices += 1
+
             if self.compute_stats:
+                marker_body = self.BODY_STRUCT.pack(0.0, 0.0, 0.0, self.STATS_MARKER)
+                file.write(marker_body)
                 stats = compute_all_statistics(regions_triangles, self.stats_params)
                 stats_bytes = pack_statistics(stats)
                 file.write(stats_bytes)

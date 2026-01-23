@@ -50,6 +50,7 @@ public:
     void rotateCamera(float deltaYaw, float deltaPitch);
     void resetCamera();
     int pickRegion(float screenX, float screenY, const Size & frameSize);
+    const Region* getRegion(int regionId) const;
 private:
     void updateCamera();
 private:

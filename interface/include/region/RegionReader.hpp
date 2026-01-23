@@ -3,6 +3,8 @@
 
 #include <util.hpp>
 #include <region/Region.hpp>
+#include <map>
+#include <string>
 
 
 struct Header {
@@ -23,6 +25,7 @@ public:
     Regions read() const;
 private:
     String _regionFilePath;
+    void readStatistics(std::ifstream& file, std::map<int, std::map<std::string, float>>& allStats) const;
 };
 
 #endif

@@ -3,6 +3,10 @@
 
 Region::Region(int id, int dim) : _id(id), _dim(dim) {}
 
+void Region::setStatistic(const std::string& name, float value) {
+    _statistics[name] = value;
+}
+
 void Region::addPoint(const glm::vec2 & point) {
     addPoint(glm::vec3(point, 0.0f));
 }

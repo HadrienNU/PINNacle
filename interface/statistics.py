@@ -1,10 +1,11 @@
 import numpy as np
 from typing import Dict, List
+from scipy.spatial import KDTree
 
 
 def compute_all_statistics(regions_triangles: dict, stats_params: dict) -> dict:
     stats = {}
-    
+
     region_areas = compute_region_areas(regions_triangles)
     stats['areas'] = region_areas
     
@@ -50,26 +51,32 @@ def compute_area_per_neighbors(region_areas: Dict[int, float], region_centroids:
     area_per_neighbors = {}
     region_ids = list(region_areas.keys())
     
+    if len(region_ids) == 0:
+        return area_per_neighbors
+    
+    centroids_list = []
+    valid_region_ids = []
+    
     for region_id in region_ids:
-        if region_id not in region_centroids:
-            continue
-            
-        current_centroid = region_centroids[region_id]
+        if region_id in region_centroids:
+            centroids_list.append(region_centroids[region_id])
+            valid_region_ids.append(region_id)
+    
+    if len(centroids_list) < 2:
+        for region_id in valid_region_ids:
+            area_per_neighbors[region_id] = region_areas[region_id]
+        return area_per_neighbors
+    
+    centroids_array = np.array(centroids_list)
+    tree = KDTree(centroids_array)
+    
+    k = min(n_neighbors + 1, len(valid_region_ids))
+    distances, indices = tree.query(centroids_array, k=k)
+    
+    for i, region_id in enumerate(valid_region_ids):
         current_area = region_areas[region_id]
-        
-        distances = []
-        for other_id in region_ids:
-            if other_id == region_id or other_id not in region_centroids:
-                continue
-            
-            other_centroid = region_centroids[other_id]
-            dist = np.linalg.norm(current_centroid - other_centroid)
-            distances.append((dist, other_id))
-        
-        distances.sort(key=lambda x: x[0])
-        closest_neighbors = distances[:min(n_neighbors, len(distances))]
-        
-        neighbors_area_sum = sum(region_areas[neighbor_id] for _, neighbor_id in closest_neighbors)
+        neighbor_indices = indices[i][1:]  # Exclude itself
+        neighbors_area_sum = sum(region_areas[valid_region_ids[idx]] for idx in neighbor_indices)
         
         if neighbors_area_sum > 0:
             area_per_neighbors[region_id] = current_area / neighbors_area_sum

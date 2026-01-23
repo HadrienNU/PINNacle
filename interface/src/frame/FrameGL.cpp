@@ -164,6 +164,15 @@ void FrameGL::setRegions(const Regions & regions) {
     }
 }
 
+const Region* FrameGL::getRegion(int regionId) const {
+    for (const auto& region : _regions) {
+        if (region.getId() == regionId) {
+            return &region;
+        }
+    }
+    return nullptr;
+}
+
 int FrameGL::pickRegion(float screenX, float screenY, const Size & frameSize) {
     float x = (2.0f * screenX) / frameSize.width - 1.0f;
     float y = 1.0f - (2.0f * screenY) / frameSize.height;

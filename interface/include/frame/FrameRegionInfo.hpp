@@ -12,8 +12,10 @@
 #define REGION_INFO_LABEL "Region ID:"
 
 #define REGION_INFO_WINDOW_WIDTH 300.0f
-#define REGION_INFO_WINDOW_HEIGHT 70.0f
+#define REGION_INFO_WINDOW_HEIGHT 85.0f
+#define REGION_INFO_STAT_LINE_HEIGHT 15.0f
 
+#define REGION_INFO_NO_STATISTICS "No statistics available"
 
 class FrameRegionInfo : public FrameImGui {
 public:
