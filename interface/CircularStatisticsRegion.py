@@ -3,22 +3,61 @@ import os
 import numpy as np
 from scipy.spatial import cKDTree
 
-DENSITY_RADIUS = 0.01  
-DOMAIN_RADIUS = 1.0    
+DENSITY_RADIUS = 0.01
+DOMAIN_RADIUS = 1.0
+
+def find_true_end_of_points(f, file_size, header_size):
+    
+    start_scan = max(header_size, file_size - 5_000_000)
+    current_pos = file_size - 4 
+    
+    while current_pos >= start_scan:
+        if (current_pos - header_size) % 16 != 0:
+            current_pos -= 4 
+            continue
+
+        f.seek(current_pos)
+        try:
+            val_bytes = f.read(4)
+            if len(val_bytes) < 4: 
+                break
+            val = struct.unpack('<i', val_bytes)[0]
+        except:
+            current_pos -= 4
+            continue
+            
+        expected_eof = current_pos + 4 + (val * 4)
+        
+        if expected_eof == file_size and val > 0:
+            return current_pos
+
+        current_pos -= 4
+
+    remainder = (file_size - header_size) % 16
+    if remainder != 0:
+        return file_size - remainder
+        
+    return file_size
 
 def add_area_to_binary(filename):
     if not os.path.exists(filename):
         print(f"Erreur: '{filename}' introuvable.")
-        return -1
+        return
 
     file_size = os.path.getsize(filename)
     header_size = 4
     record_size = 16 
-    num_records = (file_size - header_size) // record_size
-    valid_data_end = header_size + (num_records * record_size)
+
 
     try:
         with open(filename, 'rb+') as f:
+            true_end_pos = find_true_end_of_points(f, file_size, header_size)
+            if true_end_pos < file_size:
+                f.seek(true_end_pos)
+                f.truncate()
+            
+            num_records = (true_end_pos - header_size) // record_size
+
             f.seek(0)
             dim = struct.unpack('<i', f.read(4))[0]
             
@@ -33,7 +72,7 @@ def add_area_to_binary(filename):
             counts = counts[sort_order]
             
             num_regions = len(unique_ids)
-            print(f"Nombre de régions : {num_regions}")
+            print(f"Régions détectées : {num_regions}")
 
             centroids_x = np.zeros(num_regions)
             centroids_y = np.zeros(num_regions)
@@ -46,30 +85,23 @@ def add_area_to_binary(filename):
 
             centroids = np.column_stack((centroids_x, centroids_y))
             tree = cKDTree(centroids)
-            
-            normalized_areas = []
-            ref_circle_area = np.pi * (DENSITY_RADIUS ** 2)
             neighbors_list = tree.query_ball_point(centroids, r=DENSITY_RADIUS)
-
+            
+            normalized_areas = np.zeros(num_regions, dtype='<f4')
+            ref_circle_area = np.pi * (DENSITY_RADIUS ** 2)
+            
             for i, neighbors in enumerate(neighbors_list):
                 cx, cy = centroids[i]
-                dist_to_center = np.sqrt(cx**2 + cy**2)
-                if (dist_to_center + DENSITY_RADIUS) > DOMAIN_RADIUS:
-                    normalized_areas.append(-1.0)
+                if (np.sqrt(cx**2 + cy**2) + DENSITY_RADIUS) > DOMAIN_RADIUS:
+                    normalized_areas[i] = -1.0
                 else:
-                    count = len(neighbors)
-                    val = ref_circle_area / float(count)
-                    normalized_areas.append(val)
+                    normalized_areas[i] = ref_circle_area / float(len(neighbors))
 
-            f.seek(valid_data_end)
+            f.seek(true_end_pos)
             f.write(struct.pack('<i', num_regions))
-            areas_array = np.array(normalized_areas, dtype='<f4')
-            f.write(areas_array.tobytes())
-            f.truncate()
-            
-            print(f"{num_regions} aires ajoutées.")
-            return num_regions
+            f.write(normalized_areas.tobytes())
+            final_size = f.tell()
+            print(f"Taille finale : {final_size} octets.")
 
     except Exception as e:
-        print(f"Erreur : {e}")
-        return -1
+        print(f"Erreur critique : {e}")
