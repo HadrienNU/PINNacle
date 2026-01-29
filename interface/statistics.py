@@ -9,11 +9,22 @@ def compute_all_statistics(regions_triangles: dict, stats_params: dict) -> dict:
     region_areas = compute_region_areas(regions_triangles)
     stats['areas'] = region_areas
     
+    region_centroids = None
+    
     n_neighbors = stats_params.get('n_neighbors', None)
     if n_neighbors is not None and n_neighbors > 0:
-        region_centroids = compute_region_centroids(regions_triangles)
+        if region_centroids is None:
+            region_centroids = compute_region_centroids(regions_triangles)
         area_per_neighbors = compute_area_per_neighbors(region_areas, region_centroids, n_neighbors)
         stats['area_per_neighbors'] = area_per_neighbors
+    
+    radius = stats_params.get('radius', None)
+    if radius is not None and radius > 0:
+        if region_centroids is None:
+            region_centroids = compute_region_centroids(regions_triangles)
+        domain_radius = stats_params.get('domain_radius', float('inf'))
+        normalized_area_radius = compute_normalized_area_radius(region_centroids, radius, domain_radius)
+        stats['normalized_area_radius'] = normalized_area_radius
     
     return stats
 
@@ -84,6 +95,36 @@ def compute_area_per_neighbors(region_areas: Dict[int, float], region_centroids:
             area_per_neighbors[region_id] = 0.0
     
     return area_per_neighbors
+
+
+def compute_normalized_area_radius(region_centroids: Dict[int, np.ndarray], radius: float, domain_radius: float) -> Dict[int, float]:
+    normalized_areas = {}
+    
+    valid_region_ids = list(region_centroids.keys())
+    if len(valid_region_ids) == 0:
+        return normalized_areas
+    
+    centroids_list = [region_centroids[rid] for rid in valid_region_ids]
+    centroids_array = np.array(centroids_list)
+    
+    tree = KDTree(centroids_array)
+    neighbors_list = tree.query_ball_point(centroids_array, r=radius)
+    
+    ref_area = np.pi * (radius ** 2)
+    
+    for i, region_id in enumerate(valid_region_ids):
+        centroid_distance = np.linalg.norm(centroids_array[i])
+        
+        if (centroid_distance + radius) > domain_radius:
+            normalized_areas[region_id] = -1.0
+        else:
+            neighbor_count = len(neighbors_list[i])
+            if neighbor_count > 0:
+                normalized_areas[region_id] = ref_area / neighbor_count
+            else:
+                normalized_areas[region_id] = 0.0
+    
+    return normalized_areas
 
 
 def _compute_triangle_area(triangle: np.ndarray) -> float:

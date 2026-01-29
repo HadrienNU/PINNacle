@@ -4,7 +4,7 @@ from interface.activation_strategy import ActivationRegionStrategy
 
 class InterfaceCallback(Callback):
 
-    def __init__(self, date, resolution, slice_resolution, log_every=None, compute_stats=True, stats_neighbors=5):
+    def __init__(self, date, resolution, slice_resolution, log_every=None, compute_stats=True, stats_neighbors=5, stats_radius=1.0):
         super(InterfaceCallback, self).__init__()
         self.log_every = log_every        
         self.date = date     
@@ -13,6 +13,7 @@ class InterfaceCallback(Callback):
         self.slice_resolution = slice_resolution
         self.compute_stats = compute_stats
         self.stats_neighbors = stats_neighbors
+        self.stats_radius = stats_radius
 
     def register_ready(self):
         return self.epoch % self.log_every == 0     
@@ -41,7 +42,7 @@ class InterfaceCallback(Callback):
         self.activation_region = ActivationRegionStrategy(
             self.model, self.register_ready,
             self.resolution, self.slice_resolution,
-            self.compute_stats, self.stats_neighbors
+            self.compute_stats, self.stats_neighbors, self.stats_radius
         )
         self.activation_region.register_hook()
 

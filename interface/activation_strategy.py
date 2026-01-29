@@ -13,7 +13,7 @@ import torch
 
 class ActivationRegionStrategy:
 
-    def __init__(self, model, register_ready, resolution, slice_resolution, compute_stats=True, stats_neighbors=5):
+    def __init__(self, model, register_ready, resolution, slice_resolution, compute_stats=True, stats_neighbors=5, stats_radius=1.0):
         self.model = model
         self.register_ready = register_ready
         self.output_storage = []
@@ -26,6 +26,7 @@ class ActivationRegionStrategy:
         self.pdistance_threshold = 0.5
         self.compute_stats = compute_stats
         self.stats_neighbors = stats_neighbors
+        self.stats_radius = stats_radius
         self.init_strategy()        
         #self.model.net.activation = bkd.tanh
 
@@ -153,7 +154,7 @@ class ActivationRegionStrategy:
             self.resolution,
             dim=self.dim,
             compute_stats=self.compute_stats,
-            stats_params={'n_neighbors': self.stats_neighbors}
+            stats_params={'n_neighbors': self.stats_neighbors, 'radius': self.stats_radius}
         )
         regions.export(name)
         
