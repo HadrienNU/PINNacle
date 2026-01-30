@@ -3,6 +3,14 @@
 #include <algorithm>
 #include <chrono>
 
+#ifdef _WIN32
+    #include <io.h>
+    #include <fcntl.h>
+    #define popen  _popen
+    #define pclose _pclose
+#endif
+
+
 
 FrameFileSelection::FrameFileSelection(FrameGL * frameGL, std::shared_ptr<FrameInfo> frameInfo)
     : FrameImGui(FILE_SELECTION_DEFAULT_TITLE, true),
@@ -230,6 +238,7 @@ void FrameFileSelection::selectPreviousFile() {
 }
 
 void FrameFileSelection::selectNextFile() {
+    //createAnimation();
     if (_binFiles.empty()) {
         return;
     }
@@ -286,4 +295,61 @@ void FrameFileSelection::selectLatestFile() {
 
     _selectedFileIndex = static_cast<int>(_binFiles.size()) - 1;
     loadFile(_binFiles[_selectedFileIndex]);
+}
+
+void FrameFileSelection::createAnimation() {
+    if (_binFiles.empty()) {
+        return;
+    }
+    std::vector<Regions> epochs;
+    for (size_t i = 0; i < _binFiles.size(); i ++) {
+        String filename = _binFiles[i];
+        String filepath = getCurrentFolderPath() + filename;
+        _regionReader.setRegionFilePath(filepath);
+        Regions regions = _regionReader.read();
+        epochs.push_back(regions);
+    }
+    std::vector<std::vector<unsigned char>> images;
+    images = _frameGL -> renderEpochsOffscreen(epochs);
+    if (images.empty()) {
+        return;
+    }
+
+    const char* ffmpegCmd =
+        "ffmpeg -y "
+        "-f rawvideo "
+        "-pixel_format rgb24 "
+        "-video_size 1920x1080 "
+        "-framerate 5 "
+        "-i - "
+        "-c:v libx264 "
+        "-pix_fmt yuv420p "
+        "animation.mp4";
+
+    FILE* pipe = popen(ffmpegCmd, "wb");
+    if (!pipe) {
+        std::cerr << "Failed to open ffmpeg pipe\n";
+        return;
+    }
+
+    const size_t frameSize = WIDTH * HEIGHT * 3;
+    for (const auto& frame : images) {
+        if (frame.size() != frameSize) {
+            std::cerr << "Invalid frame size\n";
+            continue;
+        }
+
+        std::vector<unsigned char> flipped(frameSize);
+
+        for (int y = 0; y < HEIGHT; ++y) {
+            memcpy(
+                &flipped[y * WIDTH * 3],
+                &frame[(HEIGHT - 1 - y) * WIDTH * 3],
+                WIDTH * 3
+            );
+        }
+
+        fwrite(flipped.data(), 1, frameSize, pipe);
+    }
+    pclose(pipe);
 }

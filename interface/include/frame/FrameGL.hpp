@@ -52,7 +52,10 @@ public:
     void resetCamera();
     int pickRegion(float screenX, float screenY, const Size & frameSize);
     const Region* getRegion(int regionId) const;
-    void renderRegionsOffscreen(FrameBuffer & fb);
+    void renderRegionsOffscreen(std::vector<std::vector<unsigned char>> & images);
+    std::vector<std::vector<unsigned char>> renderEpochsOffscreen(
+        const std::vector<Regions> & regions
+    );
 private:
     void updateCamera();
 private:
@@ -61,6 +64,8 @@ private:
     TableColor _tableColor;   
     ColorGL _backgroundColor;   
     Camera _camera;
+    FrameBuffer * _msaaFbo;
+    FrameBuffer * _resolveFbo;
     std::vector<std::unique_ptr<VAO>> _vaos;
     std::vector<unsigned> _numVertices;
     RegionPicker _regionPicker;

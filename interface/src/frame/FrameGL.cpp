@@ -36,6 +36,8 @@ void main() {
 FrameGL::FrameGL(const Color & backgroundColor) :
 _backgroundColor(backgroundColor) {
     _shader = nullptr;    
+    _msaaFbo = nullptr;
+    _resolveFbo = nullptr;
     
     _camera.distance = DEFAULT_DISTANCE;
     _camera.aspectRatio = 1.0f;
@@ -49,16 +51,24 @@ _backgroundColor(backgroundColor) {
 
 FrameGL::~FrameGL() {
     delete _shader;
+    delete _msaaFbo;
+    delete _resolveFbo;
 }
 
-void FrameGL::init(const Size & frameSize) {
+static void glInit() {
     glEnable(GL_MULTISAMPLE);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
+}
+
+void FrameGL::init(const Size & frameSize) {
+    glInit();
     _shader = new Shader(vertexShaderSource, fragmentShaderSource);
+    _msaaFbo = new FrameBuffer(8);
+    _resolveFbo = new FrameBuffer();
     resize(frameSize);
 }
 
@@ -194,13 +204,9 @@ int FrameGL::pickRegion(float screenX, float screenY, const Size & frameSize) {
         glm::vec3(0.0f, 1.0f, 0.0f)
     );
     glm::vec3 rayWorld = glm::vec3(glm::inverse(view) * rayEye);
-
     glm::vec3 rayOrigin = _camera.position;
-
     glm::vec3 rayDir = glm::normalize(rayWorld);
-
     _pickedRegionId = _regionPicker.pick(rayOrigin, rayDir);
-
     return _pickedRegionId;
 }
 
@@ -217,7 +223,6 @@ void FrameGL::render() {
     _shader -> setUniformMatrix("cameraMatrix", _camera.transform);
     
     float currentTime = glfwGetTime();
-    
     for (size_t i = 0; i < _regions.size(); i ++) {
         _vaos[i] -> bind();
         int idRegion = _regions[i].getId();
@@ -227,64 +232,67 @@ void FrameGL::render() {
         _shader -> setUniformVector("color", color);
         float alphaPhase = (idRegion == _pickedRegionId) ? currentTime : 0.0f;
         _shader -> setUniformFloat("alphaPhase", alphaPhase);
-
         glDrawArrays(GL_TRIANGLES, 0, _numVertices[i]);
     }   
 }
 
-void FrameGL::renderRegionsOffscreen(FrameBuffer& fb) {
+void FrameGL::renderRegionsOffscreen(std::vector<std::vector<unsigned char>> & images) {
     std::vector<unsigned char> pixels(WIDTH * HEIGHT * 3);
+
+    _msaaFbo->bind();
+    glInit();
+
+    glClearColor(
+        _backgroundColor.r,
+        _backgroundColor.g,
+        _backgroundColor.b,
+        1.0f
+    );
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     _shader->bind();
     _shader->setUniformMatrix("cameraMatrix", _camera.transform);
 
     for (size_t i = 0; i < _regions.size(); ++i) {
-
-        fb.bind();
-
-        glClearColor(
-            _backgroundColor.r,
-            _backgroundColor.g,
-            _backgroundColor.b,
-            1.0f
-        );
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
         _vaos[i]->bind();
-
-        int idRegion = _regions[i].getId();
-        Color colorRegion = _tableColor[idRegion];
-        ColorGL colorGL(colorRegion);
-
-        _shader->setUniformVector(
-            "color",
-            glm::vec3(colorGL.r, colorGL.g, colorGL.b)
-        );
-
-        // Fixed animation
-        _shader->setUniformFloat("alphaPhase", static_cast<float>(i));
-
+        ColorGL c(_tableColor[_regions[i].getId()]);
+        _shader->setUniformVector("color", {c.r, c.g, c.b});
+        _shader->setUniformFloat("alphaPhase", 0.0f);
         glDrawArrays(GL_TRIANGLES, 0, _numVertices[i]);
-
-        // Read pixels
-        glFinish(); // sécurité
-        glReadPixels(
-            0, 0,
-            WIDTH, HEIGHT,
-            GL_RGB,
-            GL_UNSIGNED_BYTE,
-            pixels.data()
-        );
-
-        // Saving
-        save_png(
-            ("frame_" + std::to_string(i) + ".png").c_str(),
-            WIDTH,
-            HEIGHT,
-            pixels
-        );
     }
 
-    FrameBuffer::unbind();
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, _msaaFbo->id());
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, _resolveFbo->id());
+    glBlitFramebuffer(
+        0, 0, WIDTH, HEIGHT,
+        0, 0, WIDTH, HEIGHT,
+        GL_COLOR_BUFFER_BIT,
+        GL_LINEAR
+    );
+
+    _msaaFbo->unbind();
+    _resolveFbo->bind();
+
+    glFinish();
+    glReadPixels(
+        0, 0,
+        WIDTH, HEIGHT,
+        GL_RGB,
+        GL_UNSIGNED_BYTE,
+        pixels.data()
+    );
+
+    _resolveFbo->unbind();
+    images.push_back(pixels);
 }
 
+std::vector<std::vector<unsigned char>> FrameGL::renderEpochsOffscreen(
+    const std::vector<Regions> & epochs
+) {
+    std::vector<std::vector<unsigned char>> images;
+    for (Regions regions: epochs) {
+        setRegions(regions);
+        renderRegionsOffscreen(images);
+    }
+    return images;
+}

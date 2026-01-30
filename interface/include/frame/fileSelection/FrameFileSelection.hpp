@@ -12,6 +12,8 @@
 #include <functional>
 #include <thread>
 #include <atomic>
+#include <cstdio>
+#include <iostream>
 
 #define FILE_SELECTION_DEFAULT_TITLE "File Selection"
 #define FILE_SELECTION_TITLE "Select BIN File"
@@ -57,6 +59,7 @@ private:
     void selectLatestFile();
     void startAnimation();
     void stopAnimation();
+    void createAnimation();
 private:
     std::shared_ptr<FrameInfo> _frameInfo;
     std::vector<String> _binFiles;

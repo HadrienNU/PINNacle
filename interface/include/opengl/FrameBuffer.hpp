@@ -5,20 +5,22 @@
 #include <util.hpp>
 
 
-#define WIDTH 600
-#define HEIGHT 360
+#define WIDTH 1920
+#define HEIGHT 1080
 
 
 class FrameBuffer {
 public:
-    FrameBuffer();
+    FrameBuffer(int samples = 0);
+    ~FrameBuffer();
     void bind();
-    static void unbind();
-    GLuint getFBO() const { return fbo; }
-
+    void unbind();
+    GLuint id() const { return _fbo; }
 private:
-    GLuint fbo;
-    GLuint colorTex;
+    GLuint _fbo;
+    GLuint _colorTex;
+    GLuint _depthRbo;
+    GLint _oldViewport[4];
 };
 
 #endif
