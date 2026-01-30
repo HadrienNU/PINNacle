@@ -82,7 +82,8 @@ if __name__ == "__main__":
     parser.add_argument('--resolution', type=int, default=500)
     parser.add_argument('--slice_resolution', type=int, default=10)
     parser.add_argument('--compute-stats', type=bool, default=False)
-    parser.add_argument('--stats-neighbors', type=int, default=5)
+    parser.add_argument('--stats-neighbors', type=int, default=4)
+    parser.add_argument('--stats-radius', type=float, default=1.0)
 
     command_args = parser.parse_args()
 
@@ -208,7 +209,8 @@ if __name__ == "__main__":
                         slice_resolution=command_args.slice_resolution,
                         log_every=command_args.log_every,
                         compute_stats=command_args.compute_stats,
-                        stats_neighbors=command_args.stats_neighbors
+                        stats_neighbors=command_args.stats_neighbors,
+                        stats_radius=command_args.stats_radius
                     ),
                 ]
             }
