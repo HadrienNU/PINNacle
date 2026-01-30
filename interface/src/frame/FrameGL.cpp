@@ -231,3 +231,60 @@ void FrameGL::render() {
         glDrawArrays(GL_TRIANGLES, 0, _numVertices[i]);
     }   
 }
+
+void FrameGL::renderRegionsOffscreen(FrameBuffer& fb) {
+    std::vector<unsigned char> pixels(WIDTH * HEIGHT * 3);
+
+    _shader->bind();
+    _shader->setUniformMatrix("cameraMatrix", _camera.transform);
+
+    for (size_t i = 0; i < _regions.size(); ++i) {
+
+        fb.bind();
+
+        glClearColor(
+            _backgroundColor.r,
+            _backgroundColor.g,
+            _backgroundColor.b,
+            1.0f
+        );
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        _vaos[i]->bind();
+
+        int idRegion = _regions[i].getId();
+        Color colorRegion = _tableColor[idRegion];
+        ColorGL colorGL(colorRegion);
+
+        _shader->setUniformVector(
+            "color",
+            glm::vec3(colorGL.r, colorGL.g, colorGL.b)
+        );
+
+        // Fixed animation
+        _shader->setUniformFloat("alphaPhase", static_cast<float>(i));
+
+        glDrawArrays(GL_TRIANGLES, 0, _numVertices[i]);
+
+        // Read pixels
+        glFinish(); // sécurité
+        glReadPixels(
+            0, 0,
+            WIDTH, HEIGHT,
+            GL_RGB,
+            GL_UNSIGNED_BYTE,
+            pixels.data()
+        );
+
+        // Saving
+        save_png(
+            ("frame_" + std::to_string(i) + ".png").c_str(),
+            WIDTH,
+            HEIGHT,
+            pixels
+        );
+    }
+
+    FrameBuffer::unbind();
+}
+

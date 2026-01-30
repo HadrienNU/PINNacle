@@ -1,4 +1,7 @@
 #include <util.hpp>
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb/stb_image_write.h"
+
 
 void error(const String & errorMessage) {
     std::cerr << errorMessage << std::endl;
@@ -49,5 +52,33 @@ bool naturalSort(const String & a, const String & b) {
     }
 
     return a.size() < b.size();
+}
+
+bool save_png(
+    const char* filename,
+    int width,
+    int height,
+    const std::vector<unsigned char>& pixels
+) {
+    // OpenGL = bottom-left origin
+    std::vector<unsigned char> flipped(pixels.size());
+    int rowSize = width * 3;
+
+    for (int y = 0; y < height; ++y) {
+        memcpy(
+            &flipped[y * rowSize],
+            &pixels[(height - 1 - y) * rowSize],
+            rowSize
+        );
+    }
+
+    return stbi_write_png(
+        filename,
+        width,
+        height,
+        3,
+        flipped.data(),
+        rowSize
+    ) != 0;
 }
 

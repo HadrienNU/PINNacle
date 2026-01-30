@@ -39,5 +39,12 @@ Color generateRandomColor();
 
 bool naturalSort(const String & a, const String & b);
 
+bool save_png(
+    const char* filename,
+    int width,
+    int height,
+    const std::vector<unsigned char>& pixels
+);
+
 #endif
 

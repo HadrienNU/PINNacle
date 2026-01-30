@@ -4,6 +4,7 @@
 
 #include <opengl/Shader.hpp>
 #include <opengl/VAO.hpp>
+#include <opengl/FrameBuffer.hpp>
 #include <region/Region.hpp>
 #include <region/regionPicker/RegionPicker.hpp>
 #include <memory>
@@ -51,6 +52,7 @@ public:
     void resetCamera();
     int pickRegion(float screenX, float screenY, const Size & frameSize);
     const Region* getRegion(int regionId) const;
+    void renderRegionsOffscreen(FrameBuffer & fb);
 private:
     void updateCamera();
 private:
