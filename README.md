@@ -56,7 +56,7 @@ Outputs
 
 Notes
 - The default PDE list inside `benchmark.py` can be edited to choose which problems to run. By default, it runs a single example; uncomment or add entries in `pde_list` to batch multiple problems.
-- To view statistics from `.bin` files without the C++ interface: `python src/interface/print_stats.py runs/<folder>/<file>.bin`
+- To extract statistics from `.bin` files: `python src/interface/write_stats.py runs/<folder>/<file>.bin` (creates `<file>_stats.txt` in the same directory)
 
 ## 4) Build and run the C++ interface (optional)
 
@@ -171,7 +171,7 @@ python benchmark.py --name "elec-kan-ritz-ellipse" --method kan-deepritz
     - `callbacks.py`: DeepXDE callback for automatic region export
     - `regions.py`: Region export to `.bin` format
     - `statistics.py`: Statistical calculations (area, neighbors)
-    - `print_stats.py`: Terminal viewer for `.bin` statistics
+    - `write_stats.py`: Statistics extractor (creates `_stats.txt` files from `.bin` files)
     - `activation/`: Activation-based region strategies
 - `interface/`: C++ OpenGL viewer (CMake project)
 - `runs/`: output directory for training logs, CSVs, and `.bin` files
