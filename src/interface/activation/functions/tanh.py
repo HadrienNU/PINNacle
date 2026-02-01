@@ -1,4 +1,4 @@
-from interface.activation import Activation
+from ..base import Activation
 
 import torch
 

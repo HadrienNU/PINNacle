@@ -34,17 +34,36 @@ FetchContent_MakeAvailable(glm)
 # Find OpenGL
 find_package(OpenGL REQUIRED)
 
-file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
-  src/*.cpp
-  src/*.c
+# Collect application sources
+file(GLOB_RECURSE APP_SOURCES CONFIGURE_DEPENDS
+  app/src/*.cpp
+  app/src/*.c
+)
+
+# Collect external sources (ImGui, GLAD)
+set(EXTERNAL_SOURCES
+  external/imgui/imgui.cpp
+  external/imgui/imgui_draw.cpp
+  external/imgui/imgui_tables.cpp
+  external/imgui/imgui_widgets.cpp
+  external/imgui/backends/imgui_impl_glfw.cpp
+  external/imgui/backends/imgui_impl_opengl3.cpp
+  external/glad/glad.c
 )
 
 add_executable(pinn_interface
-  ${SOURCES}
+  ${APP_SOURCES}
+  ${EXTERNAL_SOURCES}
 )
 
 target_include_directories(pinn_interface PRIVATE
-  include
+  app/include
+  external
+  external/imgui
+  external/imgui/backends
+  external/glad
+  external/stb
+  external/KHR
 )
 
 target_link_libraries(pinn_interface PRIVATE

@@ -92,7 +92,7 @@ def compute_area_per_neighbors(region_areas: Dict[int, float], region_centroids:
         if neighbors_area_sum > 0:
             area_per_neighbors[region_id] = current_area / neighbors_area_sum
         else:
-            area_per_neighbors[region_id] = 0.0
+            area_per_neighbors[region_id] = current_area
     
     return area_per_neighbors
 
@@ -122,7 +122,7 @@ def compute_normalized_area_radius(region_centroids: Dict[int, np.ndarray], radi
             if neighbor_count > 0:
                 normalized_areas[region_id] = ref_area / neighbor_count
             else:
-                normalized_areas[region_id] = 0.0
+                normalized_areas[region_id] = ref_area
     
     return normalized_areas
 

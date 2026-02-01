@@ -23,12 +23,12 @@ class Regions:
         self.compute_stats = compute_stats
         self.stats_params = stats_params if stats_params is not None else {}
 
-    def export(self, filename: str):
+    def export(self, run_dir: str, filename: str):
         """Export all regions as triangles (x, y, z, class)."""
         regions_triangles = self._compute_regions_triangles()
 
-        Path("runs").mkdir(exist_ok=True)
-        filename_bin = Path(f"runs/{filename}.bin")
+        Path(run_dir).mkdir(parents=True, exist_ok=True)
+        filename_bin = Path(f"{run_dir}/{filename}.bin")
 
         with open(filename_bin, mode='wb') as file:
             header_data = self.HEADER_STRUCT.pack(self.dim)

@@ -1,7 +1,7 @@
-from interface.regions import Regions
-from interface.relu import ReLU
-from interface.silu import SiLU
-from interface.tanh import Tanh
+from ..regions import Regions
+from .functions.relu import ReLU
+from .functions.silu import SiLU
+from .functions.tanh import Tanh
 
 from sklearn.neighbors import kneighbors_graph, NearestNeighbors
 from sklearn.cluster import AgglomerativeClustering
@@ -138,16 +138,17 @@ class ActivationRegionStrategy:
         return activation_regions
 
     def export_regions(self, epoch, date):
-        name = f"{date}-epoch{epoch}"
+        run_dir = f"runs/{date}"
+        filename = f"{date}-epoch{epoch}"
         self.evaluate_regions()
         # The last one does not get any activation
         self.output_storage.pop()
         outputs = torch.cat(self.output_storage, dim=1)     
         inputs = self.input_storage[0].detach().cpu().numpy()        
         if self.pdetime: # Slices in time
-            activation_regions = self.compute_region_time(inputs, outputs, name)                      
+            activation_regions = self.compute_region_time(inputs, outputs, filename)                      
         else:
-            activation_regions = self.compute_region(inputs, outputs, name)   
+            activation_regions = self.compute_region(inputs, outputs, filename)   
 
         regions = Regions(
             activation_regions,
@@ -156,5 +157,5 @@ class ActivationRegionStrategy:
             compute_stats=self.compute_stats,
             stats_params={'n_neighbors': self.stats_neighbors, 'radius': self.stats_radius}
         )
-        regions.export(name)
+        regions.export(run_dir, filename)
         

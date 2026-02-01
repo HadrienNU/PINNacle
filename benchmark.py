@@ -24,7 +24,7 @@ from src.utils.rar import rar_wrapper
 from src.pde.electromag import Magnetism_2D, Electric_2D, Magnetism_Ritz, Electric_Ritz, Electric_Ritz_3D
 
 
-from interface.callbacks import InterfaceCallback
+from src.interface import InterfaceCallback
 
 # It is recommended not to modify this example file.
 # Please copy it as benchmark_xxx.py and make changes according to your own ideas.
@@ -81,8 +81,8 @@ if __name__ == "__main__":
     parser.add_argument('--method', type=str, default="adam")
     parser.add_argument('--resolution', type=int, default=500)
     parser.add_argument('--slice_resolution', type=int, default=10)
-    parser.add_argument('--compute-stats', type=bool, default=False)
-    parser.add_argument('--stats-neighbors', type=int, default=4)
+    parser.add_argument('--compute-stats', action='store_true')
+    parser.add_argument('--stats-neighbors', type=int, default=5)
     parser.add_argument('--stats-radius', type=float, default=1.0)
 
     command_args = parser.parse_args()
@@ -91,7 +91,8 @@ if __name__ == "__main__":
     if seed is not None:
         dde.config.set_random_seed(seed)
     date_str = time.strftime('%m.%d-%H.%M.%S', time.localtime())
-    trainer = Trainer(f"{date_str}-{command_args.name}", command_args.device)
+    run_name = f"{date_str}-{command_args.name}"
+    trainer = Trainer(run_name, command_args.device)
 
 
     for pde_config in pde_list:
@@ -204,7 +205,7 @@ if __name__ == "__main__":
                     #PlotCallback(log_every=command_args.plot_every, fast=True),
                     #LossCallback(verbose=True),
                     InterfaceCallback(
-                        date=date_str, 
+                        date=run_name, 
                         resolution=command_args.resolution,
                         slice_resolution=command_args.slice_resolution,
                         log_every=command_args.log_every,
