@@ -21,7 +21,7 @@ class ActivationRegionStrategy:
         self.map_regions_id = {}   
         self.dim = self.model.pde.geom.dim
         self.pdetime = len(model.pde.bbox) // 2 > self.dim
-        self.resolution = resolution if self.dim == 2 else resolution / 5
+        self.resolution = resolution if self.dim == 2 else resolution // 5
         self.slice_resolution = slice_resolution if self.pdetime else self.resolution
         self.pdistance_threshold = 0.5
         self.compute_stats = compute_stats
@@ -103,7 +103,7 @@ class ActivationRegionStrategy:
 
     def evaluate_regions(self):
         self.output_storage.clear()
-        self.input_storage.clear()        
+        self.input_storage.clear()
         x_range = torch.linspace(self.model.pde.bbox[0], self.model.pde.bbox[1], self.resolution)
         y_range = torch.linspace(self.model.pde.bbox[2], self.model.pde.bbox[3], self.resolution)        
         if self.dim == 3 or self.dim == 2 and self.pdetime:
