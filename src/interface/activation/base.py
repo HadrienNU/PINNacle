@@ -117,7 +117,7 @@ class Activation:
             thresholds = x_flat[quantiles]            
             for th in thresholds:
                 result += (layer > th.item()).int()
-            self.export_splitted_region(thresholds, pre_activation_layer, layer_depth)
+            #self.export_splitted_region(thresholds, pre_activation_layer, layer_depth)
             results.append(result)
             layer_depth += 1
         
