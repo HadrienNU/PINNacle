@@ -6,7 +6,16 @@
 FramesImGui::FramesImGui(FrameGL * frameGL) {
     std::shared_ptr<FrameInfo> frameInfo = std::make_shared<FrameInfo>();
     _imguiFrames.push_back(frameInfo);
-    _imguiFrames.push_back(std::make_shared<FrameFileSelection>(frameGL, frameInfo));
+    
+    std::shared_ptr<FrameFileSelection> fileSelection = std::make_shared<FrameFileSelection>(frameGL, frameInfo);
+    _imguiFrames.push_back(fileSelection);
+    
+    _imguiFrames.push_back(std::make_shared<FrameRecordAnimation>(
+        frameGL,
+        [fileSelection]() { return fileSelection->getBinFiles(); },
+        [fileSelection]() { return fileSelection->getCurrentFolderPath(); }
+    ));
+    
     _imguiFrames.push_back(std::make_shared<FrameResetCamera>(frameGL));
     _imguiFrames.push_back(std::make_shared<FrameSettings>(frameGL));
     _regionInfoFrame = std::make_shared<FrameRegionInfo>(frameGL);

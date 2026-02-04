@@ -44,13 +44,14 @@ public:
     FrameFileSelection(FrameGL * frameGL, std::shared_ptr<FrameInfo> frameInfo);
     ~FrameFileSelection();
     void render() override;
+    std::vector<String> getBinFiles() const { return _binFiles; }
+    String getCurrentFolderPath() const;
 private:
     void loadFile(const String & filename);
     void scanBINFiles();
     void scanFolders();
     void scanDirectory(const String & path, std::vector<String> & results, bool filesOnly, const String & extension = "");
     void renderComboBox(const char * comboId, const std::vector<String> & items, int & selectedIndex, const char * noSelectionText, std::function<void(int)> onSelectionChanged = nullptr);
-    String getCurrentFolderPath() const;
     size_t countRegions(const String & filepath);
     void selectPreviousFile();
     void selectNextFile();
