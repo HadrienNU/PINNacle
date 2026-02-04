@@ -40,6 +40,7 @@ void FrameFileSelection::render() {
     }
 
     if (_needsRescan.exchange(false)) {
+        scanFolders();
         scanBINFiles();
         if (_autoSelectLatest) {
             selectLatestFile();

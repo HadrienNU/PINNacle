@@ -24,5 +24,6 @@ private:
     std::atomic<bool> _stopFlag;
     std::atomic<bool> _isRunning;
     std::set<std::filesystem::path> _trackedFiles;
+    std::set<std::filesystem::path> _trackedDirectories;
     std::mutex _filesMutex;
 };

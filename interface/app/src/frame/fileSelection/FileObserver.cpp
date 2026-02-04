@@ -25,6 +25,7 @@ void FileObserver::start(const std::string& folderPath, Callback onFilesChangedC
     {
         std::lock_guard<std::mutex> lock(_filesMutex);
         _trackedFiles.clear();
+        _trackedDirectories.clear();
     }
 
     _watchThread = std::thread(&FileObserver::watchLoop, this);
@@ -53,6 +54,7 @@ void FileObserver::watchLoop() {
         try {
             if (std::filesystem::exists(folder) && std::filesystem::is_directory(folder)) {
                 std::set<std::filesystem::path> currentFiles;
+                std::set<std::filesystem::path> currentDirectories;
                 
                 for (const auto& entry : std::filesystem::recursive_directory_iterator(
                     folder, 
@@ -60,21 +62,35 @@ void FileObserver::watchLoop() {
                 )) {
                     if (entry.is_regular_file() && entry.path().extension() == ".bin") {
                         currentFiles.insert(entry.path());
+                    } else if (entry.is_directory()) {
+                        currentDirectories.insert(entry.path());
                     }
                 }
 
-                std::set<std::filesystem::path> newFiles;
+                bool hasChanges = false;
                 {
                     std::lock_guard<std::mutex> lock(_filesMutex);
+                    std::set<std::filesystem::path> newFiles;
                     std::set_difference(
                         currentFiles.begin(), currentFiles.end(),
                         _trackedFiles.begin(), _trackedFiles.end(),
                         std::inserter(newFiles, newFiles.begin())
                     );
+                    
+                    std::set<std::filesystem::path> newDirectories;
+                    std::set_difference(
+                        currentDirectories.begin(), currentDirectories.end(),
+                        _trackedDirectories.begin(), _trackedDirectories.end(),
+                        std::inserter(newDirectories, newDirectories.begin())
+                    );
+                    
                     _trackedFiles = currentFiles;
+                    _trackedDirectories = currentDirectories;
+                    
+                    hasChanges = !newFiles.empty() || !newDirectories.empty();
                 }
 
-                if (!newFiles.empty() && _onFilesChangedCallback) {
+                if (hasChanges && _onFilesChangedCallback) {
                     _onFilesChangedCallback();
                 }
             }
