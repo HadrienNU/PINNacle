@@ -171,7 +171,7 @@ def plot_density_subplot(ax, fig, triangles_by_region, stat_dict, title, stat_na
 def plot_heatmaps(triangles_by_region, stats, output_path, title_name):
     """Generate and save dual density heatmaps using region-based statistics with triangular mesh."""
     # Support both old and new key names for backward compatibility
-    stat_voisins = stats.get('average_neighborhood_area', stats.get('area_per_neighbors', {}))
+    stat_voisins = stats.get('average_neighborhood_area',{})
     stat_rayon = stats.get('normalized_area_radius', {})
     
     if len(triangles_by_region) == 0:

@@ -97,6 +97,16 @@ Available statistics flags:
 - `--stats-neighbors <n>`: Number of neighbors for area comparison (default: 5)
 - `--stats-radius <r>`: Radius for spatial density calculations (default: 1.0)
 
+### Heatmap generation
+
+To generate 2D heatmaps from a `.bin` file (file must be 2D and produced with `--compute-stats`):
+
+```bash
+python src/interface/generate_2Dheatmap.py runs/<folder>/<file>.bin
+```
+
+This creates `heatmap_<file>.png` in the same directory. The script expects the statistics keys `average_neighborhood_area` and `normalized_area_radius`.
+
 ### Best Practice Examples
 
 Additional argument flags are documented in [benchmark.py](benchmark.py). Below are optimized configurations for each PDE system and method combination.
