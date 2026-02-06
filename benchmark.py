@@ -83,7 +83,7 @@ if __name__ == "__main__":
     parser.add_argument('--slice_resolution', type=int, default=10)
     parser.add_argument('--compute-stats', action='store_true')
     parser.add_argument('--stats-neighbors', type=int, default=5)
-    parser.add_argument('--stats-radius', type=float, default=1.0)
+    parser.add_argument('--stats-radius', type=float, default=0.01)
 
     command_args = parser.parse_args()
 
