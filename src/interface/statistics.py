@@ -21,8 +21,8 @@ def compute_all_statistics(regions_triangles: dict, stats_params: dict) -> dict:
         kdtree_data = _build_kdtree(region_centroids)
     
     if n_neighbors is not None and n_neighbors > 0:
-        area_per_neighbors = compute_area_per_neighbors(region_areas, kdtree_data, n_neighbors)
-        stats['area_per_neighbors'] = area_per_neighbors
+        average_neighborhood_area = compute_average_neighborhood_area(region_areas, kdtree_data, n_neighbors)
+        stats['average_neighborhood_area'] = average_neighborhood_area
     
     if radius is not None and radius > 0:
         domain_radius = stats_params.get('domain_radius', float('inf'))
@@ -50,15 +50,30 @@ def compute_region_centroids(regions_triangles: dict) -> Dict[int, np.ndarray]:
         if len(triangles) == 0:
             continue
         
-        all_vertices = np.vstack([np.array(tri) for tri in triangles])
-        centroid = np.mean(all_vertices, axis=0)
+        triangles_array = np.array(triangles)
+        
+        # Compute triangle areas
+        v1 = triangles_array[:, 1] - triangles_array[:, 0]
+        v2 = triangles_array[:, 2] - triangles_array[:, 0]
+        cross = np.cross(v1, v2)
+        areas = 0.5 * np.linalg.norm(cross, axis=1)
+        
+        # Compute triangle centroids (mean of 3 vertices)
+        triangle_centroids = np.mean(triangles_array, axis=1)
+        
+        # Area-weighted centroid
+        total_area = np.sum(areas)
+        if total_area > 0:
+            centroid = np.sum(triangle_centroids * areas[:, np.newaxis], axis=0) / total_area
+        else:
+            centroid = np.mean(triangle_centroids, axis=0)
+        
         region_centroids[region_id] = centroid
     
     return region_centroids
 
 
 def compute_region_areas(regions_triangles: dict) -> Dict[int, float]:
-    """Compute total area for each region by summing triangle areas."""
     region_areas = {}
     
     for region_id, triangles in regions_triangles.items():
@@ -76,28 +91,28 @@ def compute_region_areas(regions_triangles: dict) -> Dict[int, float]:
     return region_areas
 
 
-def compute_area_per_neighbors(region_areas: Dict[int, float], kdtree_data: Optional[Tuple], n_neighbors: int) -> Dict[int, float]:
-    area_per_neighbors = {}
+def compute_average_neighborhood_area(region_areas: Dict[int, float], kdtree_data: Optional[Tuple], n_neighbors: int) -> Dict[int, float]:
+    average_neighborhood_area = {}
     
     if kdtree_data is None:
-        return area_per_neighbors
+        return average_neighborhood_area
     
     tree, region_ids_list, centroids_array = kdtree_data
     
     if len(region_ids_list) < 1:
-        return area_per_neighbors
+        return average_neighborhood_area
     
     areas_array = np.array([region_areas[rid] for rid in region_ids_list])
     
     k = min(n_neighbors + 1, len(region_ids_list))
-    distances, indices = tree.query(centroids_array, k=k)
+    _, indices = tree.query(centroids_array, k=k)
     
     for i, region_id in enumerate(region_ids_list):
-        neighbor_indices = indices[i][:k]  # Include self
+        neighbor_indices = indices[i][:k]  # Include self in the average
         total_area = np.sum(areas_array[neighbor_indices])
-        area_per_neighbors[region_id] = total_area / k
+        average_neighborhood_area[region_id] = total_area / k
     
-    return area_per_neighbors
+    return average_neighborhood_area
 
 
 def compute_normalized_area_radius(kdtree_data: Optional[Tuple], radius: float, domain_radius: float) -> Dict[int, float]:
